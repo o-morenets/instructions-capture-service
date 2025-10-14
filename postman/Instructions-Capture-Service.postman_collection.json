@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "Instructions Capture Service",
+    "description": "API collection for testing the Instructions Capture Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "health"]
+        },
+        "description": "Check if the service is healthy and running"
+      },
+      "response": []
+    },
+    {
+      "name": "Upload CSV File",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "sample-data/sample-trades.csv",
+              "description": "CSV file containing trade instructions"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "upload"]
+        },
+        "description": "Upload a CSV file with trade instructions"
+      },
+      "response": []
+    },
+    {
+      "name": "Upload JSON File",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "sample-data/sample-trade.json",
+              "description": "JSON file containing trade instruction"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "upload"]
+        },
+        "description": "Upload a JSON file with trade instruction"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Trades",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades"]
+        },
+        "description": "Retrieve all processed trades"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Trades by Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades?status=RECEIVED",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades"],
+          "query": [
+            {
+              "key": "status",
+              "value": "RECEIVED",
+              "description": "Filter by trade status: RECEIVED, VALIDATED, TRANSFORMED, PUBLISHED, FAILED"
+            }
+          ]
+        },
+        "description": "Get trades filtered by processing status"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Trade by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/TRADE-123",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "TRADE-123"]
+        },
+        "description": "Retrieve a specific trade by its ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Trade Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/statistics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "statistics"]
+        },
+        "description": "Get processing statistics including counts by status"
+      },
+      "response": []
+    },
+    {
+      "name": "Clear All Trades",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/trades/clear",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "trades", "clear"]
+        },
+        "description": "Clear all trades from in-memory storage (for testing)"
+      },
+      "response": []
+    },
+    {
+      "name": "Actuator Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "health"]
+        },
+        "description": "Spring Boot Actuator health endpoint"
+      },
+      "response": []
+    },
+    {
+      "name": "Actuator Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "info"]
+        },
+        "description": "Application information endpoint"
+      },
+      "response": []
+    }
+  ]
+}

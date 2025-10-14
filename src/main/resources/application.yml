@@ -1,0 +1,124 @@
+server:
+  port: 8080
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+spring:
+  application:
+    name: instructions-capture-service
+  
+  profiles:
+    active: local
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:capture-service}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: "canonicalTrade:com.example.instructions.model.CanonicalTrade"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 3
+      batch-size: 16384
+      linger-ms: 1
+      buffer-memory: 33554432
+
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 16
+        queue-capacity: 100
+
+logging:
+  level:
+    com.example.instructions: ${LOG_LEVEL:INFO}
+    org.springframework.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  file:
+    name: logs/instructions-capture-service.log
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+# Custom application properties
+app:
+  processing:
+    max-concurrent-trades: 100
+    retry-attempts: 3
+    retry-delay: 1000
+  security:
+    mask-sensitive-data: true
+    log-sensitive-data: false
+
+---
+# Local Development Profile
+spring:
+  config:
+    activate:
+      on-profile: local
+  kafka:
+    bootstrap-servers: localhost:9092
+
+logging:
+  level:
+    com.example.instructions: DEBUG
+    root: INFO
+
+app:
+  processing:
+    max-concurrent-trades: 50
+
+---
+# Docker Profile  
+spring:
+  config:
+    activate:
+      on-profile: docker
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: production
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      retries: 5
+      batch-size: 32768
+      linger-ms: 5
+    consumer:
+      session-timeout-ms: 30000
+      heartbeat-interval-ms: 3000
+
+logging:
+  level:
+    com.example.instructions: INFO
+    root: WARN
+  file:
+    name: /var/log/instructions-capture-service.log
+
+app:
+  processing:
+    max-concurrent-trades: 200

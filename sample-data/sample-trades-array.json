@@ -1,0 +1,26 @@
+[
+  {
+    "accountNumber": "123456789",
+    "securityId": "ABC123",
+    "tradeType": "BUY",
+    "amount": 100000,
+    "timestamp": "2025-08-04T21:15:33",
+    "platformId": "ACCT123"
+  },
+  {
+    "accountNumber": "987654321",
+    "securityId": "XYZ789",
+    "tradeType": "SELL",
+    "amount": 50000,
+    "timestamp": "2025-08-04T21:16:33",
+    "platformId": "ACCT456"
+  },
+  {
+    "accountNumber": "555666777",
+    "securityId": "DEF456",
+    "tradeType": "PURCHASE",
+    "amount": 75000,
+    "timestamp": "2025-08-04T21:17:33",
+    "platformId": "ACCT789"
+  }
+]
