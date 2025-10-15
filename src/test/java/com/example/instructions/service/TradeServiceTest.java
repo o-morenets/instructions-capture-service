@@ -190,7 +190,7 @@ class TradeServiceTest {
                 "\"platformId\":\"ACCT123\"}";
 
         when(multipartFile.getOriginalFilename()).thenReturn("trade.json");
-        when(multipartFile.getBytes()).thenReturn(jsonContent.getBytes());
+        when(multipartFile.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(jsonContent.getBytes()));
         when(multipartFile.isEmpty()).thenReturn(false);
         when(multipartFile.getSize()).thenReturn((long) jsonContent.length());
 
