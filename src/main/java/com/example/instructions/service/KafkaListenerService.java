@@ -13,6 +13,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
+import org.springframework.kafka.support.serializer.DeserializationException;
 
 /**
  * Service for consuming trade instructions from Kafka
@@ -36,11 +37,20 @@ public class KafkaListenerService {
     )
     @KafkaListener(topics = KafkaConfig.INBOUND_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
     public void handleTradeInstruction(
-            @Payload CanonicalTrade canonicalTrade,
+            @Payload(required = false) CanonicalTrade canonicalTrade,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment acknowledgment) {
+
+        // Handle deserialization errors
+        if (canonicalTrade == null) {
+            log.error("Received null trade instruction due to deserialization error - Topic: {}, Partition: {}, Offset: {}", 
+                     topic, partition, offset);
+            acknowledgment.acknowledge(); // Skip this message
+
+            return;
+        }
 
         log.info("Received trade instruction from Kafka - Topic: {}, Partition: {}, Offset: {}, Trade ID: {}",
                 topic, partition, offset, canonicalTrade.tradeId());
@@ -81,10 +91,19 @@ public class KafkaListenerService {
      */
     @KafkaListener(topics = KafkaConfig.INBOUND_TOPIC + ".DLT", groupId = "${spring.kafka.consumer.group-id}")
     public void handleDltTradeInstruction(
-            @Payload CanonicalTrade canonicalTrade,
+            @Payload(required = false) CanonicalTrade canonicalTrade,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.EXCEPTION_MESSAGE) String exceptionMessage,
             Acknowledgment acknowledgment) {
+
+        // Handle deserialization errors in DLT
+        if (canonicalTrade == null) {
+            log.error("Received null trade instruction in DLT due to deserialization error - Topic: {}, Exception: {}", 
+                     topic, exceptionMessage);
+            acknowledgment.acknowledge(); // Skip this message
+
+            return;
+        }
 
         log.error("Trade instruction moved to Dead Letter Topic - Topic: {}, Trade ID: {}, Exception: {}",
                 topic, canonicalTrade.tradeId(), exceptionMessage);
