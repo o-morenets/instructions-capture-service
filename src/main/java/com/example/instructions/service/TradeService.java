@@ -135,8 +135,7 @@ public class TradeService {
                 // Stream factory - create Flux from lines
                 reader -> Flux.fromStream(reader.lines())
                         .skip(1) // Skip header
-                        .map(this::parseCsvLine)
-                        .filter(Objects::nonNull)
+                        .flatMap(line -> Mono.justOrEmpty(parseCsvLine(line)))
                         .subscribeOn(Schedulers.boundedElastic()), // Use IO thread pool
                 // Resource cleanup
                 reader -> {
@@ -242,11 +241,13 @@ public class TradeService {
                 .flatMap(storedTrade -> {
                     // Transform to platform format for Kafka
                     PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+                    storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
+                    updateTrade(storedTrade);
 
                     // Publish to Kafka asynchronously - don't fail the whole operation if Kafka fails
                     return Mono.fromFuture(kafkaPublisher.publishTrade(platformTrade))
                             .map(result -> {
-                                log.info("Successfully published trade {}", storedTrade.getTradeId());
+                                log.debug("Successfully published trade {} to Kafka", storedTrade.getTradeId());
                                 storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
                                 updateTrade(storedTrade);
                                 return storedTrade;
@@ -259,6 +260,14 @@ public class TradeService {
                                 // Return the trade anyway, don't propagate the error
                                 return Mono.just(storedTrade);
                             });
+                })
+                .onErrorResume(error -> {
+                    // Handle errors during validation/transformation
+                    log.error("Error processing trade {}: {}", 
+                            trade.getTradeId(), error.getMessage(), error);
+                    trade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+                    // Return empty to skip this trade but continue processing others
+                    return Mono.empty();
                 });
     }
 
@@ -274,11 +283,6 @@ public class TradeService {
         // Validate trade
         tradeTransformer.validateCanonicalTrade(storedTrade);
         storedTrade.setStatus(CanonicalTrade.TradeStatus.VALIDATED);
-        updateTrade(storedTrade);
-
-        // Transform to platform format
-        PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
-        storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
         updateTrade(storedTrade);
 
         return storedTrade;
