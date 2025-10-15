@@ -57,25 +57,14 @@ public class TradeController {
             @Parameter(description = "Trade instructions file (CSV or JSON)")
             @RequestParam("file") @NotNull MultipartFile file) {
 
-        long fileSize = file.getSize();
-        log.info("Received reactive file upload request: {} (size: {} bytes, limit: {} bytes)",
-                file.getOriginalFilename(), fileSize, 10 * 1024 * 1024);
+        log.info("Received reactive file upload request: {} (size: {} bytes)",
+                file.getOriginalFilename(), file.getSize());
 
         try {
             // Validate file
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(createErrorResponse("File is empty"));
-            }
-
-            // Allow up to 10 MiB file content (20MB servlet config provides overhead buffer)
-            long maxSize = 10L * 1024 * 1024; // 10 MiB = 10,485,760 bytes
-            if (fileSize > maxSize) {
-                String errorMsg = String.format("File size (%d bytes) exceeds 10 MiB limit (%d bytes)",
-                        fileSize, maxSize);
-                log.warn(errorMsg);
-                return ResponseEntity.status(413)
-                        .body(createErrorResponse(errorMsg));
             }
 
             String filename = file.getOriginalFilename();
