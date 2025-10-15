@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -90,8 +91,9 @@ class JsonArrayProcessingTest {
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
                 .thenReturn(createSamplePlatformTrade());
+        SendResult<String, PlatformTrade> mockSendResult = mock(SendResult.class);
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
-                .thenReturn(CompletableFuture.completedFuture(null));
+                .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
         List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 

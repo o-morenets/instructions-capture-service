@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -174,8 +176,9 @@ class TradeServiceTest {
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
                 .thenReturn(createSamplePlatformTrade());
+        SendResult<String, PlatformTrade> mockSendResult = mock(SendResult.class);
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
-                .thenReturn(mock(java.util.concurrent.CompletableFuture.class));
+                .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
         List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
@@ -190,7 +193,6 @@ class TradeServiceTest {
                 "\"platformId\":\"ACCT123\"}";
 
         when(multipartFile.getOriginalFilename()).thenReturn("trade.json");
-        when(multipartFile.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(jsonContent.getBytes()));
         when(multipartFile.getBytes()).thenReturn(jsonContent.getBytes());
         when(multipartFile.isEmpty()).thenReturn(false);
         when(multipartFile.getSize()).thenReturn((long) jsonContent.length());
@@ -198,8 +200,9 @@ class TradeServiceTest {
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
                 .thenReturn(createSamplePlatformTrade());
+        SendResult<String, PlatformTrade> mockSendResult = mock(SendResult.class);
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
-                .thenReturn(mock(java.util.concurrent.CompletableFuture.class));
+                .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
         List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
