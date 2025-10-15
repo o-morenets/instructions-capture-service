@@ -141,23 +141,6 @@ public class TradeController {
     }
 
     /**
-     * Get trade processing statistics
-     */
-    @GetMapping("/statistics")
-    @Operation(
-            summary = "Get trade processing statistics",
-            description = "Get statistics about processed trades including counts by status"
-    )
-    @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully")
-    public ResponseEntity<Map<String, Object>> getTradeStatistics() {
-        log.debug("Getting trade statistics");
-
-        Map<String, Object> stats = tradeService.getTradeStatistics();
-
-        return ResponseEntity.ok(stats);
-    }
-
-    /**
      * Clear all trades from memory (for testing/admin purposes)
      */
     @DeleteMapping("/clear")
@@ -191,6 +174,23 @@ public class TradeController {
         health.put("timestamp", System.currentTimeMillis());
 
         return ResponseEntity.ok(health);
+    }
+
+    /**
+     * Get trade processing statistics
+     */
+    @GetMapping("/statistics")
+    @Operation(
+            summary = "Get trade processing statistics",
+            description = "Get statistics about processed trades including counts by status"
+    )
+    @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully")
+    public ResponseEntity<Map<String, Object>> getTradeStatistics() {
+        log.debug("Getting trade statistics");
+
+        Map<String, Object> stats = tradeService.getTradeStatistics();
+
+        return ResponseEntity.ok(stats);
     }
 
     /**

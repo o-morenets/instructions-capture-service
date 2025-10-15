@@ -93,6 +93,7 @@ public class GlobalExceptionHandler {
         errorResponse.put("errorCode", errorCode);
         errorResponse.put("status", status.value());
         errorResponse.put("timestamp", LocalDateTime.now());
+
         return errorResponse;
     }
 }
