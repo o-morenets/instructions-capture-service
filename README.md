@@ -49,7 +49,7 @@ A Spring Boot microservice that processes trade instructions via file upload and
 
 - Java 21+
 - Maven 3.6+
-- Apache Kafka 3.3+ (KRaft mode, no Zookeeper required)
+- Apache Kafka 3.3+
 - Docker (optional)
 
 ## ⚙️ Configuration
@@ -212,19 +212,9 @@ account_number,security_id,trade_type,amount,timestamp,platform_id
 # Unit tests only
 ./mvnw test -Dtest="*Test"
 
-# Integration tests only
-./mvnw test -Dtest="*IntegrationTest"
-
 # Controller tests only
 ./mvnw test -Dtest="*ControllerTest"
 ```
-
-### Test Coverage
-The project includes:
-- **Unit Tests**: 95%+ coverage for business logic
-- **Integration Tests**: End-to-end Kafka messaging
-- **Contract Tests**: API endpoint validation
-- **Performance Tests**: Load testing scenarios
 
 ## 🐳 Docker Support
 
@@ -395,6 +385,6 @@ docker exec -it instructions-capture-service-kafka-1 kafka-cluster --bootstrap-s
 - Adjust JVM heap size: `-Xmx2g`
 
 ### Support
-- 📧 Email: dev@example.com
+- 📧 Email: oleksii.morenets@gmail.com
 - 🐛 Issues: GitHub Issues
 - 💬 Discussions: GitHub Discussions
