@@ -63,6 +63,17 @@ management:
     env:
       enabled: true
 
+# Springdoc OpenAPI configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    displayRequestDuration: true
+
 # Custom application properties
 app:
   processing:
