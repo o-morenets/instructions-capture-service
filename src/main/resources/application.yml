@@ -25,7 +25,7 @@ spring:
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:capture-service}
       auto-offset-reset: earliest
-      enable-auto-commit: false
+      enable-auto-commit: true
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:

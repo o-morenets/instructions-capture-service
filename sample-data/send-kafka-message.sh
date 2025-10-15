@@ -11,7 +11,7 @@ docker exec -i instructions-capture-service-kafka-1 kafka-console-producer \
   --bootstrap-server localhost:9092 \
   --property "parse.key=true" \
   --property "key.separator=:" << 'EOF'
-KAFKA-TEST-001:{"tradeId": "KAFKA-TEST-001", "accountNumber": "123456789", "securityId": "AAPL", "tradeType": "BUY", "amount": 50000.00, "timestamp": "2025-10-15T12:00:00", "platformId": "TEST_PLATFORM"}
+KAFKA-TEST-777:{"tradeId": "KAFKA-TEST-777", "accountNumber": "123456789", "securityId": "AAPL", "tradeType": "BUY", "amount": 50000.00, "timestamp": "2025-10-15T12:00:00", "platformId": "TEST_PLATFORM"}
 EOF
 
 echo "✅ Message sent successfully!"
