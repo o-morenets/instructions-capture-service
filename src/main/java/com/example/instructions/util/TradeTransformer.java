@@ -33,34 +33,34 @@ public class TradeTransformer {
      */
     public PlatformTrade transformToPlatformTrade(CanonicalTrade canonicalTrade) {
         log.debug("Transforming canonical trade to platform format for trade: {}",
-                canonicalTrade.tradeId());
+                canonicalTrade.getTradeId());
 
         try {
-            String maskedAccount = maskAccountNumber(canonicalTrade.accountNumber());
-            String normalizedSecurity = normalizeSecurityId(canonicalTrade.securityId());
-            String normalizedTradeType = normalizeTradeType(canonicalTrade.tradeType());
+            String maskedAccount = maskAccountNumber(canonicalTrade.getAccountNumber());
+            String normalizedSecurity = normalizeSecurityId(canonicalTrade.getSecurityId());
+            String normalizedTradeType = normalizeTradeType(canonicalTrade.getTradeType());
 
             PlatformTrade.TradeDetails tradeDetails = PlatformTrade.TradeDetails.builder()
                     .account(maskedAccount)
                     .security(normalizedSecurity)
                     .type(normalizedTradeType)
-                    .amount(canonicalTrade.amount())
-                    .timestamp(canonicalTrade.timestamp())
+                    .amount(canonicalTrade.getAmount())
+                    .timestamp(canonicalTrade.getTimestamp())
                     .build();
 
             PlatformTrade platformTrade = PlatformTrade.builder()
-                    .platformId(canonicalTrade.platformId())
+                    .platformId(canonicalTrade.getPlatformId())
                     .trade(tradeDetails)
                     .build();
 
             log.debug("Successfully transformed trade {} to platform format",
-                    canonicalTrade.tradeId());
+                    canonicalTrade.getTradeId());
 
             return platformTrade;
 
         } catch (Exception e) {
             log.error("Error transforming trade {} to platform format: {}",
-                    canonicalTrade.tradeId(), e.getMessage());
+                    canonicalTrade.getTradeId(), e.getMessage());
 
             throw new IllegalArgumentException("Failed to transform trade: " + e.getMessage(), e);
         }
@@ -142,27 +142,27 @@ public class TradeTransformer {
             throw new IllegalArgumentException("Trade cannot be null");
         }
 
-        if (trade.accountNumber() == null || trade.accountNumber().trim().isEmpty()) {
+        if (trade.getAccountNumber() == null || trade.getAccountNumber().trim().isEmpty()) {
             throw new IllegalArgumentException("Account number is required");
         }
 
-        if (trade.securityId() == null || trade.securityId().trim().isEmpty()) {
+        if (trade.getSecurityId() == null || trade.getSecurityId().trim().isEmpty()) {
             throw new IllegalArgumentException("Security ID is required");
         }
 
-        if (trade.tradeType() == null || trade.tradeType().trim().isEmpty()) {
+        if (trade.getTradeType() == null || trade.getTradeType().trim().isEmpty()) {
             throw new IllegalArgumentException("Trade type is required");
         }
 
-        if (trade.amount() == null || trade.amount().signum() <= 0) {
+        if (trade.getAmount() == null || trade.getAmount().signum() <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
         }
 
-        if (trade.timestamp() == null) {
+        if (trade.getTimestamp() == null) {
             throw new IllegalArgumentException("Timestamp is required");
         }
 
-        if (trade.platformId() == null || trade.platformId().trim().isEmpty()) {
+        if (trade.getPlatformId() == null || trade.getPlatformId().trim().isEmpty()) {
             throw new IllegalArgumentException("Platform ID is required");
         }
     }

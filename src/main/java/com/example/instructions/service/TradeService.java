@@ -48,7 +48,7 @@ public class TradeService {
      */
     @Async
     public void processTradeInstruction(CanonicalTrade canonicalTrade) {
-        log.info("Processing trade instruction: {}", canonicalTrade.tradeId());
+        log.info("Processing trade instruction: {}", canonicalTrade.getTradeId());
 
         try {
             // Store canonical trade
@@ -56,32 +56,31 @@ public class TradeService {
 
             // Validate trade
             tradeTransformer.validateCanonicalTrade(storedTrade);
-            CanonicalTrade validatedTrade = createTradeWithStatus(storedTrade, CanonicalTrade.TradeStatus.VALIDATED);
-            updateTrade(validatedTrade);
+            storedTrade.setStatus(CanonicalTrade.TradeStatus.VALIDATED);
+            updateTrade(storedTrade);
 
             // Transform to platform format
-            PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(validatedTrade);
-            CanonicalTrade transformedTrade = createTradeWithStatus(validatedTrade, CanonicalTrade.TradeStatus.TRANSFORMED);
-            updateTrade(transformedTrade);
+            PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+            storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
+            updateTrade(storedTrade);
 
             // Publish to Kafka
             kafkaPublisher.publishTrade(platformTrade)
                     .whenComplete((result, ex) -> {
-                        CanonicalTrade finalTrade;
                         if (ex != null) {
-                            log.error("Failed to publish trade {}: {}", transformedTrade.tradeId(), ex.getMessage());
-                            finalTrade = createTradeWithStatus(transformedTrade, CanonicalTrade.TradeStatus.FAILED);
+                            log.error("Failed to publish trade {}: {}", storedTrade.getTradeId(), ex.getMessage());
+                            storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                         } else {
-                            log.info("Successfully published trade {}", transformedTrade.tradeId());
-                            finalTrade = createTradeWithStatus(transformedTrade, CanonicalTrade.TradeStatus.PUBLISHED);
+                            log.info("Successfully published trade {}", storedTrade.getTradeId());
+                            storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
                         }
-                        updateTrade(finalTrade);
+                        updateTrade(storedTrade);
                     });
 
         } catch (Exception e) {
-            log.error("Error processing trade instruction {}: {}", canonicalTrade.tradeId(), e.getMessage(), e);
-            CanonicalTrade failedTrade = createTradeWithStatus(canonicalTrade, CanonicalTrade.TradeStatus.FAILED);
-            updateTrade(failedTrade);
+            log.error("Error processing trade instruction {}: {}", canonicalTrade.getTradeId(), e.getMessage(), e);
+            canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+            updateTrade(canonicalTrade);
             throw e;
         }
     }
@@ -120,9 +119,9 @@ public class TradeService {
             List<String> tradeIds = tradeStream
                     .parallel()  // Enable parallel processing
                     .map(trade -> {
-                        CanonicalTrade tradeWithSource = createTradeWithSource(trade, "FILE_UPLOAD");
-                        processTradeInstruction(tradeWithSource);
-                        return tradeWithSource.tradeId();
+                        trade.setSource("FILE_UPLOAD");
+                        processTradeInstruction(trade);
+                        return trade.getTradeId();
                     })
                     .collect(Collectors.toList());
 
@@ -274,25 +273,13 @@ public class TradeService {
      * Process a parsed JSON trade - ensure trade ID and status are set
      */
     private CanonicalTrade processJsonTrade(CanonicalTrade trade) {
-        String tradeId = (trade.tradeId() == null || trade.tradeId().trim().isEmpty()) 
-                ? generateTradeId() 
-                : trade.tradeId();
-        CanonicalTrade.TradeStatus status = (trade.status() == null) 
-                ? CanonicalTrade.TradeStatus.RECEIVED 
-                : trade.status();
-
-        return CanonicalTrade.builder()
-                .tradeId(tradeId)
-                .accountNumber(trade.accountNumber())
-                .securityId(trade.securityId())
-                .tradeType(trade.tradeType())
-                .amount(trade.amount())
-                .timestamp(trade.timestamp())
-                .platformId(trade.platformId())
-                .source(trade.source())
-                .status(status)
-                .processedAt(trade.processedAt())
-                .build();
+        if (trade.getTradeId() == null || trade.getTradeId().trim().isEmpty()) {
+            trade.setTradeId(generateTradeId());
+        }
+        if (trade.getStatus() == null) {
+            trade.setStatus(CanonicalTrade.TradeStatus.RECEIVED);
+        }
+        return trade;
     }
 
     /**
@@ -322,36 +309,23 @@ public class TradeService {
      * Store trade in memory
      */
     public CanonicalTrade storeTrade(CanonicalTrade trade) {
-        CanonicalTrade tradeToStore = trade;
-
-        if (trade.tradeId() == null) {
-            tradeToStore = CanonicalTrade.builder()
-                    .tradeId(generateTradeId())
-                    .accountNumber(trade.accountNumber())
-                    .securityId(trade.securityId())
-                    .tradeType(trade.tradeType())
-                    .amount(trade.amount())
-                    .timestamp(trade.timestamp())
-                    .platformId(trade.platformId())
-                    .source(trade.source())
-                    .status(trade.status())
-                    .processedAt(trade.processedAt())
-                    .build();
+        if (trade.getTradeId() == null) {
+            trade.setTradeId(generateTradeId());
         }
-        tradeStorage.put(tradeToStore.tradeId(), tradeToStore);
+        tradeStorage.put(trade.getTradeId(), trade);
 
-        log.debug("Stored trade in memory: {}", tradeToStore.tradeId());
+        log.debug("Stored trade in memory: {}", trade.getTradeId());
 
-        return tradeToStore;
+        return trade;
     }
 
     /**
      * Update existing trade
      */
     public void updateTrade(CanonicalTrade trade) {
-        if (trade.tradeId() != null && tradeStorage.containsKey(trade.tradeId())) {
-            tradeStorage.put(trade.tradeId(), trade);
-            log.debug("Updated trade in memory: {}", trade.tradeId());
+        if (trade.getTradeId() != null && tradeStorage.containsKey(trade.getTradeId())) {
+            tradeStorage.put(trade.getTradeId(), trade);
+            log.debug("Updated trade in memory: {}", trade.getTradeId());
         }
     }
 
@@ -371,44 +345,8 @@ public class TradeService {
         }
 
         return tradeStorage.values().stream()
-                .filter(trade -> trade.status() == status)
+                .filter(trade -> trade.getStatus() == status)
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Create a new trade instance with updated status
-     */
-    private CanonicalTrade createTradeWithStatus(CanonicalTrade trade, CanonicalTrade.TradeStatus status) {
-        return CanonicalTrade.builder()
-                .tradeId(trade.tradeId())
-                .accountNumber(trade.accountNumber())
-                .securityId(trade.securityId())
-                .tradeType(trade.tradeType())
-                .amount(trade.amount())
-                .timestamp(trade.timestamp())
-                .platformId(trade.platformId())
-                .source(trade.source())
-                .status(status)
-                .processedAt(trade.processedAt())
-                .build();
-    }
-
-    /**
-     * Create a new trade instance with updated source
-     */
-    private CanonicalTrade createTradeWithSource(CanonicalTrade trade, String source) {
-        return CanonicalTrade.builder()
-                .tradeId(trade.tradeId())
-                .accountNumber(trade.accountNumber())
-                .securityId(trade.securityId())
-                .tradeType(trade.tradeType())
-                .amount(trade.amount())
-                .timestamp(trade.timestamp())
-                .platformId(trade.platformId())
-                .source(source)
-                .status(trade.status())
-                .processedAt(trade.processedAt())
-                .build();
     }
 
     /**
@@ -436,7 +374,7 @@ public class TradeService {
 
         Map<CanonicalTrade.TradeStatus, Long> statusCounts = tradeStorage.values().stream()
                 .collect(Collectors.groupingBy(
-                        CanonicalTrade::status,
+                        CanonicalTrade::getStatus,
                         Collectors.counting()
                 ));
 

@@ -55,7 +55,7 @@ class TradeServiceTest {
 
         tradeService.storeTrade(trade);
 
-        Optional<CanonicalTrade> retrievedTrade = tradeService.getTradeById(trade.tradeId());
+        Optional<CanonicalTrade> retrievedTrade = tradeService.getTradeById(trade.getTradeId());
         assertThat(retrievedTrade).isPresent();
         assertThat(retrievedTrade.get()).isEqualTo(trade);
     }
@@ -65,50 +65,50 @@ class TradeServiceTest {
         CanonicalTrade baseTrade = createSampleCanonicalTrade();
         CanonicalTrade trade = CanonicalTrade.builder()
                 .tradeId(null)
-                .accountNumber(baseTrade.accountNumber())
-                .securityId(baseTrade.securityId())
-                .tradeType(baseTrade.tradeType())
-                .amount(baseTrade.amount())
-                .timestamp(baseTrade.timestamp())
-                .platformId(baseTrade.platformId())
-                .source(baseTrade.source())
-                .status(baseTrade.status())
-                .processedAt(baseTrade.processedAt())
+                .accountNumber(baseTrade.getAccountNumber())
+                .securityId(baseTrade.getSecurityId())
+                .tradeType(baseTrade.getTradeType())
+                .amount(baseTrade.getAmount())
+                .timestamp(baseTrade.getTimestamp())
+                .platformId(baseTrade.getPlatformId())
+                .source(baseTrade.getSource())
+                .status(baseTrade.getStatus())
+                .processedAt(baseTrade.getProcessedAt())
                 .build();
 
         CanonicalTrade storedTrade = tradeService.storeTrade(trade);
 
-        assertThat(storedTrade.tradeId()).isNotNull();
-        assertThat(storedTrade.tradeId()).startsWith("TRADE-");
+        assertThat(storedTrade.getTradeId()).isNotNull();
+        assertThat(storedTrade.getTradeId()).startsWith("TRADE-");
     }
 
     @Test
     void shouldGetAllTradesWithStatusFilter() {
         CanonicalTrade baseTrade = createSampleCanonicalTrade();
         CanonicalTrade trade1 = CanonicalTrade.builder()
-                .tradeId(baseTrade.tradeId())
-                .accountNumber(baseTrade.accountNumber())
-                .securityId(baseTrade.securityId())
-                .tradeType(baseTrade.tradeType())
-                .amount(baseTrade.amount())
-                .timestamp(baseTrade.timestamp())
-                .platformId(baseTrade.platformId())
-                .source(baseTrade.source())
+                .tradeId(baseTrade.getTradeId())
+                .accountNumber(baseTrade.getAccountNumber())
+                .securityId(baseTrade.getSecurityId())
+                .tradeType(baseTrade.getTradeType())
+                .amount(baseTrade.getAmount())
+                .timestamp(baseTrade.getTimestamp())
+                .platformId(baseTrade.getPlatformId())
+                .source(baseTrade.getSource())
                 .status(CanonicalTrade.TradeStatus.RECEIVED)
-                .processedAt(baseTrade.processedAt())
+                .processedAt(baseTrade.getProcessedAt())
                 .build();
 
         CanonicalTrade trade2 = CanonicalTrade.builder()
                 .tradeId("TRADE-2")
-                .accountNumber(baseTrade.accountNumber())
-                .securityId(baseTrade.securityId())
-                .tradeType(baseTrade.tradeType())
-                .amount(baseTrade.amount())
-                .timestamp(baseTrade.timestamp())
-                .platformId(baseTrade.platformId())
-                .source(baseTrade.source())
+                .accountNumber(baseTrade.getAccountNumber())
+                .securityId(baseTrade.getSecurityId())
+                .tradeType(baseTrade.getTradeType())
+                .amount(baseTrade.getAmount())
+                .timestamp(baseTrade.getTimestamp())
+                .platformId(baseTrade.getPlatformId())
+                .source(baseTrade.getSource())
                 .status(CanonicalTrade.TradeStatus.VALIDATED)
-                .processedAt(baseTrade.processedAt())
+                .processedAt(baseTrade.getProcessedAt())
                 .build();
 
         tradeService.storeTrade(trade1);
@@ -118,7 +118,7 @@ class TradeServiceTest {
         List<CanonicalTrade> allTrades = tradeService.getAllTrades(null);
 
         assertThat(receivedTrades).hasSize(1);
-        assertThat(receivedTrades.getFirst().status()).isEqualTo(CanonicalTrade.TradeStatus.RECEIVED);
+        assertThat(receivedTrades.getFirst().getStatus()).isEqualTo(CanonicalTrade.TradeStatus.RECEIVED);
         assertThat(allTrades).hasSize(2);
     }
 
@@ -126,29 +126,29 @@ class TradeServiceTest {
     void shouldGetTradeStatistics() {
         CanonicalTrade baseTrade = createSampleCanonicalTrade();
         CanonicalTrade trade1 = CanonicalTrade.builder()
-                .tradeId(baseTrade.tradeId())
-                .accountNumber(baseTrade.accountNumber())
-                .securityId(baseTrade.securityId())
-                .tradeType(baseTrade.tradeType())
-                .amount(baseTrade.amount())
-                .timestamp(baseTrade.timestamp())
-                .platformId(baseTrade.platformId())
-                .source(baseTrade.source())
+                .tradeId(baseTrade.getTradeId())
+                .accountNumber(baseTrade.getAccountNumber())
+                .securityId(baseTrade.getSecurityId())
+                .tradeType(baseTrade.getTradeType())
+                .amount(baseTrade.getAmount())
+                .timestamp(baseTrade.getTimestamp())
+                .platformId(baseTrade.getPlatformId())
+                .source(baseTrade.getSource())
                 .status(CanonicalTrade.TradeStatus.RECEIVED)
-                .processedAt(baseTrade.processedAt())
+                .processedAt(baseTrade.getProcessedAt())
                 .build();
 
         CanonicalTrade trade2 = CanonicalTrade.builder()
                 .tradeId("TRADE-2")
-                .accountNumber(baseTrade.accountNumber())
-                .securityId(baseTrade.securityId())
-                .tradeType(baseTrade.tradeType())
-                .amount(baseTrade.amount())
-                .timestamp(baseTrade.timestamp())
-                .platformId(baseTrade.platformId())
-                .source(baseTrade.source())
+                .accountNumber(baseTrade.getAccountNumber())
+                .securityId(baseTrade.getSecurityId())
+                .tradeType(baseTrade.getTradeType())
+                .amount(baseTrade.getAmount())
+                .timestamp(baseTrade.getTimestamp())
+                .platformId(baseTrade.getPlatformId())
+                .source(baseTrade.getSource())
                 .status(CanonicalTrade.TradeStatus.PUBLISHED)
-                .processedAt(baseTrade.processedAt())
+                .processedAt(baseTrade.getProcessedAt())
                 .build();
 
         tradeService.storeTrade(trade1);

@@ -13,7 +13,6 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
-import org.springframework.kafka.support.serializer.DeserializationException;
 
 /**
  * Service for consuming trade instructions from Kafka
@@ -53,32 +52,20 @@ public class KafkaListenerService {
         }
 
         log.info("Received trade instruction from Kafka - Topic: {}, Partition: {}, Offset: {}, Trade ID: {}",
-                topic, partition, offset, canonicalTrade.tradeId());
+                topic, partition, offset, canonicalTrade.getTradeId());
 
         try {
-            CanonicalTrade tradeWithSource = CanonicalTrade.builder()
-                    .tradeId(canonicalTrade.tradeId())
-                    .accountNumber(canonicalTrade.accountNumber())
-                    .securityId(canonicalTrade.securityId())
-                    .tradeType(canonicalTrade.tradeType())
-                    .amount(canonicalTrade.amount())
-                    .timestamp(canonicalTrade.timestamp())
-                    .platformId(canonicalTrade.platformId())
-                    .source("KAFKA")
-                    .status(canonicalTrade.status())
-                    .processedAt(canonicalTrade.processedAt())
-                    .build();
-
-            tradeService.processTradeInstruction(tradeWithSource);
+            canonicalTrade.setSource("KAFKA");
+            tradeService.processTradeInstruction(canonicalTrade);
 
             acknowledgment.acknowledge();
 
             log.info("Successfully processed trade instruction from Kafka - Trade ID: {}",
-                    canonicalTrade.tradeId());
+                    canonicalTrade.getTradeId());
 
         } catch (Exception e) {
             log.error("Error processing trade instruction from Kafka - Trade ID: {}, Error: {}",
-                    canonicalTrade.tradeId(), e.getMessage(), e);
+                    canonicalTrade.getTradeId(), e.getMessage(), e);
 
             // Don't acknowledge - this will trigger retry mechanism
 
@@ -106,31 +93,20 @@ public class KafkaListenerService {
         }
 
         log.error("Trade instruction moved to Dead Letter Topic - Topic: {}, Trade ID: {}, Exception: {}",
-                topic, canonicalTrade.tradeId(), exceptionMessage);
+                topic, canonicalTrade.getTradeId(), exceptionMessage);
 
         try {
-            CanonicalTrade failedTrade = CanonicalTrade.builder()
-                    .tradeId(canonicalTrade.tradeId())
-                    .accountNumber(canonicalTrade.accountNumber())
-                    .securityId(canonicalTrade.securityId())
-                    .tradeType(canonicalTrade.tradeType())
-                    .amount(canonicalTrade.amount())
-                    .timestamp(canonicalTrade.timestamp())
-                    .platformId(canonicalTrade.platformId())
-                    .source(canonicalTrade.source())
-                    .status(CanonicalTrade.TradeStatus.FAILED)
-                    .processedAt(canonicalTrade.processedAt())
-                    .build();
-            tradeService.storeTrade(failedTrade);
+            canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+            tradeService.storeTrade(canonicalTrade);
 
             acknowledgment.acknowledge();
 
             log.info("Failed trade instruction stored for manual review - Trade ID: {}",
-                    canonicalTrade.tradeId());
+                    canonicalTrade.getTradeId());
 
         } catch (Exception e) {
             log.error("Error handling DLT trade instruction - Trade ID: {}, Error: {}",
-                    canonicalTrade.tradeId(), e.getMessage(), e);
+                    canonicalTrade.getTradeId(), e.getMessage(), e);
 
             // Still acknowledge to prevent infinite loop
             acknowledgment.acknowledge();
