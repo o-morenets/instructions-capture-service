@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
         log.warn("File size exceeded: {}", e.getMessage());
 
         Map<String, Object> errorResponse = createErrorResponse(
-                "File size exceeds the maximum allowed limit of 10MB",
+                "File size exceeds the maximum allowed limit of 10 MiB (10,485,760 bytes)",
                 HttpStatus.PAYLOAD_TOO_LARGE,
                 "FILE_SIZE_EXCEEDED"
         );

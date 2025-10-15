@@ -36,13 +36,14 @@ public class TradeController {
     private final TradeService tradeService;
 
     /**
-     * Upload and process trade instructions file
-     * Accepts CSV and JSON file formats
+     * Upload and process trade instructions file using reactive streaming (Flux)
+     * Provides better memory management and backpressure for large files
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-            summary = "Upload trade instructions file",
-            description = "Upload and process a CSV or JSON file containing trade instructions. " +
+            summary = "Upload trade instructions file (Reactive)",
+            description = "Upload and process a CSV or JSON file using reactive streaming with Flux. " +
+                    "Provides better memory management and backpressure for large files. " +
                     "CSV format: account_number,security_id,trade_type,amount,timestamp,platform_id. " +
                     "JSON format: Single trade object or array of trade objects."
     )
@@ -56,8 +57,9 @@ public class TradeController {
             @Parameter(description = "Trade instructions file (CSV or JSON)")
             @RequestParam("file") @NotNull MultipartFile file) {
 
-        log.info("Received file upload request: {} (size: {} bytes)",
-                file.getOriginalFilename(), file.getSize());
+        long fileSize = file.getSize();
+        log.info("Received reactive file upload request: {} (size: {} bytes, limit: {} bytes)",
+                file.getOriginalFilename(), fileSize, 10 * 1024 * 1024);
 
         try {
             // Validate file
@@ -66,9 +68,14 @@ public class TradeController {
                         .body(createErrorResponse("File is empty"));
             }
 
-            if (file.getSize() > 10 * 1024 * 1024) { // 10MB limit
+            // Allow up to 10 MiB file content (20MB servlet config provides overhead buffer)
+            long maxSize = 10L * 1024 * 1024; // 10 MiB = 10,485,760 bytes
+            if (fileSize > maxSize) {
+                String errorMsg = String.format("File size (%d bytes) exceeds 10 MiB limit (%d bytes)",
+                        fileSize, maxSize);
+                log.warn(errorMsg);
                 return ResponseEntity.status(413)
-                        .body(createErrorResponse("File size exceeds 10MB limit"));
+                        .body(createErrorResponse(errorMsg));
             }
 
             String filename = file.getOriginalFilename();
@@ -78,17 +85,20 @@ public class TradeController {
                         .body(createErrorResponse("Only CSV and JSON files are supported"));
             }
 
-            List<String> tradeIds = tradeService.processFileUpload(file);
+            // Process reactively and block to get result (for MVC controller)
+            List<String> tradeIds = tradeService.processFileUploadReactive(file)
+                    .block(); // Block to bridge reactive to imperative
+
+            int tradeCount = tradeIds != null ? tradeIds.size() : 0;
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "File processed successfully");
             response.put("filename", filename);
-            response.put("tradesProcessed", tradeIds.size());
-            response.put("tradeIds", tradeIds);
+            response.put("tradesProcessed", tradeCount);
 
             log.info("Successfully processed file upload: {} with {} trades",
-                    filename, tradeIds.size());
+                    filename, tradeCount);
 
             return ResponseEntity.ok(response);
 

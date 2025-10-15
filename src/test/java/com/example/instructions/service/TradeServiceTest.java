@@ -177,7 +177,7 @@ class TradeServiceTest {
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
                 .thenReturn(mock(java.util.concurrent.CompletableFuture.class));
 
-        List<String> tradeIds = tradeService.processFileUpload(multipartFile);
+        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
         assertThat(tradeIds).hasSize(2);
         assertThat(tradeIds).allMatch(id -> id.startsWith("TRADE-"));
@@ -191,6 +191,7 @@ class TradeServiceTest {
 
         when(multipartFile.getOriginalFilename()).thenReturn("trade.json");
         when(multipartFile.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(jsonContent.getBytes()));
+        when(multipartFile.getBytes()).thenReturn(jsonContent.getBytes());
         when(multipartFile.isEmpty()).thenReturn(false);
         when(multipartFile.getSize()).thenReturn((long) jsonContent.length());
 
@@ -200,7 +201,7 @@ class TradeServiceTest {
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
                 .thenReturn(mock(java.util.concurrent.CompletableFuture.class));
 
-        List<String> tradeIds = tradeService.processFileUpload(multipartFile);
+        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
         assertThat(tradeIds).hasSize(1);
         assertThat(tradeIds.getFirst()).startsWith("TRADE-");
@@ -212,8 +213,7 @@ class TradeServiceTest {
         when(multipartFile.isEmpty()).thenReturn(false);
         when(multipartFile.getSize()).thenReturn(100L);
 
-        assertThatThrownBy(() -> tradeService.processFileUpload(multipartFile))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> tradeService.processFileUploadReactive(multipartFile).block())
                 .hasMessageContaining("Unsupported file format");
     }
 
@@ -222,8 +222,7 @@ class TradeServiceTest {
         when(multipartFile.getOriginalFilename()).thenReturn("empty.csv");
         when(multipartFile.isEmpty()).thenReturn(true);
 
-        assertThatThrownBy(() -> tradeService.processFileUpload(multipartFile))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> tradeService.processFileUploadReactive(multipartFile).block())
                 .hasMessageContaining("File is empty");
     }
 

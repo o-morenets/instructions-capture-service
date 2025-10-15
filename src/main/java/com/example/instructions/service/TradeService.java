@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,7 +24,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Core service for processing trade instructions
@@ -44,38 +46,18 @@ public class TradeService {
     private final AtomicLong tradeIdCounter = new AtomicLong(1);
 
     /**
-     * Process trade instruction - main method
+     * Process trade instruction (async for Kafka listener)
      */
     @Async
     public void processTradeInstruction(CanonicalTrade canonicalTrade) {
         log.info("Processing trade instruction: {}", canonicalTrade.getTradeId());
 
         try {
-            // Store canonical trade
-            CanonicalTrade storedTrade = storeTrade(canonicalTrade);
+            // Use common processing logic
+            CanonicalTrade storedTrade = validateAndTransformTrade(canonicalTrade);
 
-            // Validate trade
-            tradeTransformer.validateCanonicalTrade(storedTrade);
-            storedTrade.setStatus(CanonicalTrade.TradeStatus.VALIDATED);
-            updateTrade(storedTrade);
-
-            // Transform to platform format
-            PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
-            storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
-            updateTrade(storedTrade);
-
-            // Publish to Kafka
-            kafkaPublisher.publishTrade(platformTrade)
-                    .whenComplete((result, ex) -> {
-                        if (ex != null) {
-                            log.error("Failed to publish trade {}: {}", storedTrade.getTradeId(), ex.getMessage());
-                            storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
-                        } else {
-                            log.info("Successfully published trade {}", storedTrade.getTradeId());
-                            storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
-                        }
-                        updateTrade(storedTrade);
-                    });
+            // Publish to Kafka asynchronously
+            publishTradeToKafka(storedTrade);
 
         } catch (Exception e) {
             log.error("Error processing trade instruction {}: {}", canonicalTrade.getTradeId(), e.getMessage(), e);
@@ -86,94 +68,100 @@ public class TradeService {
     }
 
     /**
-     * Process file upload using stream-based processing for efficiency
-     * Benefits: Lower memory footprint, faster time-to-first-result, handles large files efficiently
+     * Process file upload using reactive Flux streaming
+     * Benefits: Non-blocking I/O, backpressure control, memory efficient for large files
      */
-    public List<String> processFileUpload(MultipartFile file) {
-        log.info("Processing file upload: {} (size: {} bytes)", file.getOriginalFilename(), file.getSize());
+    public Mono<List<String>> processFileUploadReactive(MultipartFile file) {
+        log.info("Processing file upload reactively: {} (size: {} bytes)",
+                file.getOriginalFilename(), file.getSize());
 
-        try {
-            // Validate file is not empty
+        return Mono.defer(() -> {
+            // Validate file
             if (file.isEmpty() || file.getSize() == 0) {
-                throw new IllegalArgumentException("File is empty");
+                return Mono.error(new IllegalArgumentException("File is empty"));
             }
 
             String filename = file.getOriginalFilename();
             if (filename == null) {
-                throw new IllegalArgumentException("File name cannot be null");
+                return Mono.error(new IllegalArgumentException("File name cannot be null"));
             }
 
-            // Stream-based processing: trades are processed as they're parsed, not accumulated
-            Stream<CanonicalTrade> tradeStream;
+            // Determine file type and create appropriate Flux
+            Flux<CanonicalTrade> tradeFlux;
 
             if (filename.toLowerCase().endsWith(".csv")) {
-                tradeStream = processCsvFileStream(file);
+                tradeFlux = processCsvFileReactive(file);
             } else if (filename.toLowerCase().endsWith(".json")) {
-                tradeStream = processJsonFileStream(file);
+                tradeFlux = processJsonFileReactive(file);
             } else {
-                throw new IllegalArgumentException("Unsupported file format. Only CSV and JSON files are accepted.");
+                return Mono.error(new IllegalArgumentException(
+                        "Unsupported file format. Only CSV and JSON files are accepted."));
             }
 
-            // Process trades in parallel for better performance
-            // Each trade is transformed and processed immediately without waiting for full file parse
-            List<String> tradeIds = tradeStream
-                    .parallel()  // Enable parallel processing
-                    .map(trade -> {
-                        trade.setSource("FILE_UPLOAD");
-                        processTradeInstruction(trade);
-                        return trade.getTradeId();
-                    })
-                    .collect(Collectors.toList());
-
-            log.info("Successfully processed {} trades from file: {}", tradeIds.size(), filename);
-            return tradeIds;
-
-        } catch (Exception e) {
-            log.error("Error processing file upload: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
-        }
+            // Process trades with controlled parallelism and backpressure
+            return tradeFlux
+                    .doOnNext(trade -> trade.setSource("FILE_UPLOAD"))
+                    .flatMap(trade -> processTradeReactive(trade)
+                                    .onErrorResume(error -> {
+                                        log.error("Error processing trade {}: {}",
+                                                trade.getTradeId(), error.getMessage());
+                                        return Mono.empty(); // Skip failed trades
+                                    }),
+                            8) // Concurrency level - process 8 trades in parallel
+                    .map(CanonicalTrade::getTradeId)
+                    .collectList()
+                    .doOnSuccess(tradeIds ->
+                            log.info("Successfully processed {} trades from file: {}",
+                                    tradeIds.size(), filename))
+                    .doOnError(error ->
+                            log.error("Error processing file upload: {}", error.getMessage(), error));
+        });
     }
 
     /**
-     * Process CSV file using stream-based approach (memory efficient)
-     * Lazily evaluates each line - no accumulation in memory
-     * Expected columns: account_number,security_id,trade_type,amount,timestamp,platform_id
+     * Process CSV file using reactive streaming
+     * Memory efficient - processes one line at a time with backpressure
      */
-    private Stream<CanonicalTrade> processCsvFileStream(MultipartFile file) {
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
-            
-            return reader.lines()
-                    .skip(1)  // Skip header line
-                    .map(line -> parseCsvLine(line))
-                    .filter(Optional::isPresent)  // Filter out parsing failures
-                    .map(Optional::get)
-                    .onClose(() -> {
-                        try {
-                            reader.close();
-                        } catch (IOException e) {
-                            log.error("Error closing CSV reader: {}", e.getMessage());
-                        }
-                    });
-        } catch (IOException e) {
-            log.error("Error opening CSV file: {}", e.getMessage());
-            return Stream.empty();
-        }
+    private Flux<CanonicalTrade> processCsvFileReactive(MultipartFile file) {
+        return Flux.using(
+                // Resource factory - open the file
+                () -> {
+                    try {
+                        return new BufferedReader(new InputStreamReader(file.getInputStream()));
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to open CSV file", e);
+                    }
+                },
+                // Stream factory - create Flux from lines
+                reader -> Flux.fromStream(reader.lines())
+                        .skip(1) // Skip header
+                        .map(this::parseCsvLine)
+                        .filter(Objects::nonNull)
+                        .subscribeOn(Schedulers.boundedElastic()), // Use IO thread pool
+                // Resource cleanup
+                reader -> {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        log.error("Error closing CSV reader: {}", e.getMessage());
+                    }
+                }
+        );
     }
-    
+
     /**
-     * Parse a single CSV line into CanonicalTrade
-     * Returns empty Optional if parsing fails
+     * Parse CSV line into CanonicalTrade (for reactive processing)
      */
-    private Optional<CanonicalTrade> parseCsvLine(String line) {
+    private CanonicalTrade parseCsvLine(String line) {
         try {
             String[] fields = line.split(",");
             if (fields.length != 6) {
-                log.warn("Skipping invalid CSV line (expected 6 fields, got {}): {}", fields.length, line);
-                return Optional.empty();
+                log.warn("Skipping invalid CSV line (expected 6 fields, got {}): {}",
+                        fields.length, line);
+                return null;
             }
 
-            CanonicalTrade trade = CanonicalTrade.builder()
+            return CanonicalTrade.builder()
                     .tradeId(generateTradeId())
                     .accountNumber(fields[0].trim())
                     .securityId(fields[1].trim())
@@ -183,92 +171,55 @@ public class TradeService {
                     .platformId(fields[5].trim())
                     .status(CanonicalTrade.TradeStatus.RECEIVED)
                     .build();
-
-            return Optional.of(trade);
         } catch (Exception e) {
-            log.warn("Skipping invalid CSV line due to parsing error: {} - Error: {}", line, e.getMessage());
-            return Optional.empty();
+            log.warn("Skipping invalid CSV line due to parsing error: {} - Error: {}",
+                    line, e.getMessage());
+            return null;
         }
     }
 
     /**
-     * Process JSON file using Jackson streaming API (memory efficient)
-     * Supports both single trade object and array of trades
-     * Uses streaming parser to handle large JSON files without loading entire content into memory
+     * Process JSON file using reactive streaming
+     * Handles both single object and array of trades
      */
-    private Stream<CanonicalTrade> processJsonFileStream(MultipartFile file) {
-        try {
-            com.fasterxml.jackson.core.JsonParser parser = objectMapper.getFactory().createParser(file.getInputStream());
-            
-            // Check if it's an array or single object
-            com.fasterxml.jackson.core.JsonToken token = parser.nextToken();
-            
-            if (token == null) {
-                log.error("Empty JSON file");
-                parser.close();
-                return Stream.empty();
-            }
-            
-            if (token == com.fasterxml.jackson.core.JsonToken.START_ARRAY) {
-                // Stream array elements - parser is positioned at START_ARRAY
-                return parseJsonArray(parser);
-            } else if (token == com.fasterxml.jackson.core.JsonToken.START_OBJECT) {
-                // Single object - parser is positioned at START_OBJECT, readValue will consume it
-                try {
-                    CanonicalTrade trade = objectMapper.readValue(parser, CanonicalTrade.class);
-                    return Stream.of(processJsonTrade(trade));
-                } finally {
+    private Flux<CanonicalTrade> processJsonFileReactive(MultipartFile file) {
+        return Mono.fromCallable(() -> {
                     try {
-                        parser.close();
+                        // Read file content
+                        byte[] bytes = file.getBytes();
+                        if (bytes.length == 0) {
+                            throw new IllegalArgumentException("File is empty");
+                        }
+                        String content = new String(bytes);
+                        content = content.trim();
+
+                        log.debug("Parsing JSON content (length: {}): {}", content.length(),
+                                content.length() > 200 ? content.substring(0, 200) + "..." : content);
+
+                        // Check if it's an array or single object
+                        if (content.startsWith("[")) {
+                            // Parse as array
+                            CanonicalTrade[] trades = objectMapper.readValue(content, CanonicalTrade[].class);
+                            log.debug("Parsed {} trades from JSON array", trades.length);
+                            return Arrays.asList(trades);
+                        } else if (content.startsWith("{")) {
+                            // Parse as single object
+                            CanonicalTrade trade = objectMapper.readValue(content, CanonicalTrade.class);
+                            log.debug("Parsed 1 trade from JSON object");
+                            return List.of(trade);
+                        } else {
+                            throw new IllegalArgumentException("Invalid JSON format");
+                        }
                     } catch (IOException e) {
-                        log.warn("Error closing JSON parser: {}", e.getMessage());
+                        log.error("Failed to parse JSON", e);
+                        throw new RuntimeException("Failed to parse JSON file", e);
                     }
-                }
-            } else {
-                log.error("Invalid JSON format - expected object or array, got: {}", token);
-                parser.close();
-                return Stream.empty();
-            }
-        } catch (IOException e) {
-            log.error("Error parsing JSON file: {}", e.getMessage(), e);
-            return Stream.empty();
-        }
+                })
+                .flatMapMany(Flux::fromIterable)
+                .map(this::processJsonTrade)
+                .subscribeOn(Schedulers.boundedElastic());
     }
-    
-    /**
-     * Parse JSON array using streaming API
-     * Returns a stream of trades parsed one at a time
-     * Parser must be positioned at START_ARRAY token
-     * 
-     * Note: Parser access is sequential to avoid thread-safety issues.
-     * Parallel processing happens AFTER parsing in processFileUpload().
-     */
-    private Stream<CanonicalTrade> parseJsonArray(com.fasterxml.jackson.core.JsonParser parser) {
-        List<CanonicalTrade> trades = new ArrayList<>();
-        try {
-            com.fasterxml.jackson.core.JsonToken token;
-            while ((token = parser.nextToken()) != null && token != com.fasterxml.jackson.core.JsonToken.END_ARRAY) {
-                if (token == com.fasterxml.jackson.core.JsonToken.START_OBJECT) {
-                    try {
-                        CanonicalTrade trade = objectMapper.readValue(parser, CanonicalTrade.class);
-                        trades.add(processJsonTrade(trade));
-                    } catch (IOException e) {
-                        log.warn("Error parsing JSON trade object: {}", e.getMessage());
-                    }
-                }
-            }
-        } catch (IOException e) {
-            log.error("Error parsing JSON array: {}", e.getMessage());
-        } finally {
-            try {
-                parser.close();
-            } catch (IOException e) {
-                log.warn("Error closing JSON parser: {}", e.getMessage());
-            }
-        }
-        return trades.stream();
-    }
-    
+
     /**
      * Process a parsed JSON trade - ensure trade ID and status are set
      */
@@ -280,6 +231,74 @@ public class TradeService {
             trade.setStatus(CanonicalTrade.TradeStatus.RECEIVED);
         }
         return trade;
+    }
+
+    /**
+     * Process a single trade reactively
+     */
+    private Mono<CanonicalTrade> processTradeReactive(CanonicalTrade trade) {
+        return Mono.fromCallable(() -> validateAndTransformTrade(trade))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(storedTrade -> {
+                    // Transform to platform format for Kafka
+                    PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+
+                    // Publish to Kafka asynchronously - don't fail the whole operation if Kafka fails
+                    return Mono.fromFuture(kafkaPublisher.publishTrade(platformTrade))
+                            .map(result -> {
+                                log.info("Successfully published trade {}", storedTrade.getTradeId());
+                                storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
+                                updateTrade(storedTrade);
+                                return storedTrade;
+                            })
+                            .onErrorResume(error -> {
+                                log.error("Failed to publish trade {}: {}",
+                                        storedTrade.getTradeId(), error.getMessage());
+                                storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+                                updateTrade(storedTrade);
+                                // Return the trade anyway, don't propagate the error
+                                return Mono.just(storedTrade);
+                            });
+                });
+    }
+
+    /**
+     * Common logic: Store, validate, and transform trade
+     *
+     * @return the stored and validated trade
+     */
+    private CanonicalTrade validateAndTransformTrade(CanonicalTrade trade) {
+        // Store trade
+        CanonicalTrade storedTrade = storeTrade(trade);
+
+        // Validate trade
+        tradeTransformer.validateCanonicalTrade(storedTrade);
+        storedTrade.setStatus(CanonicalTrade.TradeStatus.VALIDATED);
+        updateTrade(storedTrade);
+
+        // Transform to platform format
+        PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+        storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
+        updateTrade(storedTrade);
+
+        return storedTrade;
+    }
+
+    /**
+     * Publish trade to Kafka with async callback handling
+     */
+    private void publishTradeToKafka(CanonicalTrade storedTrade) {
+        PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+
+        kafkaPublisher.publishTrade(platformTrade)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+                    } else {
+                        storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
+                    }
+                    updateTrade(storedTrade);
+                });
     }
 
     /**
