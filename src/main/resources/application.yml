@@ -16,12 +16,11 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-  
+
   profiles:
     active: local
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:capture-service}
       auto-offset-reset: earliest
@@ -49,6 +48,7 @@ spring:
         core-size: 8
         max-size: 16
         queue-capacity: 100
+
   mvc:
     async:
       request-timeout: 300000  # 5 minutes timeout for async requests
@@ -94,76 +94,3 @@ app:
   security:
     mask-sensitive-data: true
     log-sensitive-data: false
-
----
-# Local Development Profile
-spring:
-  config:
-    activate:
-      on-profile: local
-  kafka:
-    bootstrap-servers: localhost:9092
-
-logging:
-  level:
-    com.example.instructions: DEBUG
-    root: INFO
-
-app:
-  processing:
-    max-concurrent-trades: 50
-
----
-# Docker Profile  
-spring:
-  config:
-    activate:
-      on-profile: docker
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
-    consumer:
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.json.trusted.packages: "*"
-        spring.json.type.mapping: "canonicalTrade:com.example.instructions.model.CanonicalTrade"
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: "com.example.instructions.model.CanonicalTrade"
-
----
-# Production Profile
-spring:
-  config:
-    activate:
-      on-profile: production
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    producer:
-      retries: 5
-      batch-size: 32768
-      linger-ms: 5
-    consumer:
-      session-timeout-ms: 30000
-      heartbeat-interval-ms: 3000
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.json.trusted.packages: "*"
-        spring.json.type.mapping: "canonicalTrade:com.example.instructions.model.CanonicalTrade"
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: "com.example.instructions.model.CanonicalTrade"
-
-logging:
-  level:
-    com.example.instructions: INFO
-    root: WARN
-  file:
-    name: /var/log/instructions-capture-service.log
-
-app:
-  processing:
-    max-concurrent-trades: 200

@@ -1,0 +1,16 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+logging:
+  level:
+    com.example.instructions: DEBUG
+    root: INFO
+
+app:
+  processing:
+    max-concurrent-trades: 50
