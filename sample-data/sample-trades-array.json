@@ -4,7 +4,7 @@
     "securityId": "ABC123",
     "tradeType": "BUY",
     "amount": 100000,
-    "timestamp": "2025-08-04T21:15:33",
+    "timestamp": "2025-08-04T21:15:33Z",
     "platformId": "ACCT123"
   },
   {
@@ -12,7 +12,7 @@
     "securityId": "XYZ789",
     "tradeType": "SELL",
     "amount": 50000,
-    "timestamp": "2025-08-04T21:16:33",
+    "timestamp": "2025-08-04T21:16:33Z",
     "platformId": "ACCT456"
   },
   {
@@ -20,7 +20,7 @@
     "securityId": "DEF456",
     "tradeType": "PURCHASE",
     "amount": 75000,
-    "timestamp": "2025-08-04T21:17:33",
+    "timestamp": "2025-08-04T21:17:33Z",
     "platformId": "ACCT789"
   }
 ]

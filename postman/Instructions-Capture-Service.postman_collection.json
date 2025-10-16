@@ -96,13 +96,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/trades?status=RECEIVED",
+          "raw": "{{baseUrl}}/api/v1/trades?status=PUBLISHED",
           "host": ["{{baseUrl}}"],
           "path": ["api", "v1", "trades"],
           "query": [
             {
               "key": "status",
-              "value": "RECEIVED",
+              "value": "PUBLISHED",
               "description": "Filter by trade status: RECEIVED, VALIDATED, TRANSFORMED, PUBLISHED, FAILED"
             }
           ]

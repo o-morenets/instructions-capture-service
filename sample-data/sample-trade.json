@@ -3,6 +3,6 @@
   "securityId": "ABC123",
   "tradeType": "BUY",
   "amount": 100000,
-  "timestamp": "2025-08-04T21:15:33",
+  "timestamp": "2025-08-04T21:15:33Z",
   "platformId": "ACCT123"
 }

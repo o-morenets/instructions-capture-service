@@ -17,9 +17,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +55,7 @@ public class TradeService {
 
         try {
             // Use common processing logic
-            CanonicalTrade storedTrade = validateAndTransformTrade(canonicalTrade);
+            CanonicalTrade storedTrade = validateAndStoreTrade(canonicalTrade);
 
             // Publish to Kafka asynchronously
             publishTradeToKafka(storedTrade);
@@ -67,7 +68,7 @@ public class TradeService {
         }
     }
 
-    private CanonicalTrade validateAndTransformTrade(CanonicalTrade trade) {
+    private CanonicalTrade validateAndStoreTrade(CanonicalTrade trade) {
         tradeTransformer.validateCanonicalTrade(trade);
         trade.setStatus(CanonicalTrade.TradeStatus.VALIDATED);
 
@@ -99,17 +100,17 @@ public class TradeService {
         }
     }
 
-    private void publishTradeToKafka(CanonicalTrade storedTrade) {
-        PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(storedTrade);
+    private void publishTradeToKafka(CanonicalTrade canonicalTrade) {
+        PlatformTrade platformTrade = tradeTransformer.transformToPlatformTrade(canonicalTrade);
 
         kafkaPublisher.publishTrade(platformTrade)
                 .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+                    if (ex == null) {
+                        canonicalTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
                     } else {
-                        storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
+                        canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                     }
-                    updateTrade(storedTrade);
+                    updateTrade(canonicalTrade);
                 });
     }
 
@@ -204,7 +205,7 @@ public class TradeService {
                     .securityId(fields[1].trim())
                     .tradeType(fields[2].trim())
                     .amount(new BigDecimal(fields[3].trim()))
-                    .timestamp(parseTimestamp(fields[4].trim()))
+                    .timestamp(LocalDateTime.ofInstant(Instant.parse(fields[4].trim()), ZoneOffset.UTC))
                     .platformId(fields[5].trim())
                     .status(CanonicalTrade.TradeStatus.RECEIVED)
                     .build();
@@ -215,39 +216,14 @@ public class TradeService {
         }
     }
 
-    private LocalDateTime parseTimestamp(String timestampStr) {
-        List<DateTimeFormatter> formatters = Arrays.asList(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME
-        );
-
-        for (DateTimeFormatter formatter : formatters) {
-            try {
-                return LocalDateTime.parse(timestampStr, formatter);
-            } catch (DateTimeParseException ignored) {
-                // Try next formatter
-            }
-        }
-
-        throw new IllegalArgumentException("Unable to parse timestamp: " + timestampStr);
-    }
-
     private Flux<CanonicalTrade> processJsonFileReactive(MultipartFile file) {
         return Mono.fromCallable(() -> {
                     try {
-                        // Read file content
                         byte[] bytes = file.getBytes();
-                        if (bytes.length == 0) {
-                            throw new IllegalArgumentException("File is empty");
-                        }
-                        String content = new String(bytes);
-                        content = content.trim();
 
-                        log.debug("Parsing JSON content (length: {}): {}", content.length(),
-                                content.length() > 200 ? content.substring(0, 200) + "..." : content);
+                        String content = new String(bytes).trim();
+
+                        log.debug("Parsing JSON content (length: {})", content.length());
 
                         // Check if it's an array or single object
                         if (content.startsWith("[")) {
@@ -286,7 +262,7 @@ public class TradeService {
     }
 
     private Mono<CanonicalTrade> processTradeReactive(CanonicalTrade trade) {
-        return Mono.fromCallable(() -> validateAndTransformTrade(trade))
+        return Mono.fromCallable(() -> validateAndStoreTrade(trade))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(storedTrade -> {
 
