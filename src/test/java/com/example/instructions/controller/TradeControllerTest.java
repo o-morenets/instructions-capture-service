@@ -52,14 +52,12 @@ class TradeControllerTest {
 
     @Test
     void shouldUploadCsvFileSuccessfully() throws Exception {
-        // Given
         String csvContent = "account_number,security_id,trade_type,amount,timestamp,platform_id\n" +
                 "123456789,ABC123,BUY,100000,2025-08-04 21:15:33,ACCT123";
         MockMultipartFile file = new MockMultipartFile("file", "trades.csv", "text/csv", csvContent.getBytes());
 
         when(tradeService.processFileUploadReactive(any())).thenReturn(Mono.just(Arrays.asList("TRADE-1", "TRADE-2")));
 
-        // When & Then
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(file))
                 .andExpect(status().isOk())
@@ -70,13 +68,11 @@ class TradeControllerTest {
 
     @Test
     void shouldUploadJsonFileSuccessfully() throws Exception {
-        // Given
         String jsonContent = "{\"accountNumber\":\"123456789\",\"securityId\":\"ABC123\"}";
         MockMultipartFile file = new MockMultipartFile("file", "trade.json", "application/json", jsonContent.getBytes());
 
         when(tradeService.processFileUploadReactive(any())).thenReturn(Mono.just(List.of("TRADE-1")));
 
-        // When & Then
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(file))
                 .andExpect(status().isOk())
@@ -87,10 +83,8 @@ class TradeControllerTest {
 
     @Test
     void shouldRejectEmptyFile() throws Exception {
-        // Given
         MockMultipartFile emptyFile = new MockMultipartFile("file", "empty.csv", "text/csv", new byte[0]);
 
-        // When & Then
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(emptyFile))
                 .andExpect(status().isBadRequest())
@@ -100,10 +94,8 @@ class TradeControllerTest {
 
     @Test
     void shouldRejectUnsupportedFileFormat() throws Exception {
-        // Given
         MockMultipartFile invalidFile = new MockMultipartFile("file", "invalid.txt", "text/plain", "content".getBytes());
 
-        // When & Then
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(invalidFile))
                 .andExpect(status().isBadRequest())
@@ -111,17 +103,10 @@ class TradeControllerTest {
                 .andExpect(jsonPath("$.error").value("Only CSV and JSON files are supported"));
     }
 
-    // Note: Large file rejection is handled by Spring's servlet multipart filter
-    // which is configured in application.yml (max-file-size: 10MB).
-    // This can't be tested with MockMvc as it bypasses servlet filters.
-    // It's tested in GlobalExceptionHandler and would require full integration test.
-
     @Test
     void shouldGetTradeById() throws Exception {
-        // Given
         when(tradeService.getTradeById("TRADE-123")).thenReturn(Optional.of(sampleTrade));
 
-        // When & Then
         mockMvc.perform(get("/api/v1/trades/TRADE-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tradeId").value("TRADE-123"))
@@ -131,21 +116,17 @@ class TradeControllerTest {
 
     @Test
     void shouldReturnNotFoundForNonExistentTrade() throws Exception {
-        // Given
         when(tradeService.getTradeById("NON-EXISTENT")).thenReturn(Optional.empty());
 
-        // When & Then
         mockMvc.perform(get("/api/v1/trades/NON-EXISTENT"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldGetAllTrades() throws Exception {
-        // Given
         List<CanonicalTrade> trades = Collections.singletonList(sampleTrade);
         when(tradeService.getAllTrades(null)).thenReturn(trades);
 
-        // When & Then
         mockMvc.perform(get("/api/v1/trades"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -154,11 +135,9 @@ class TradeControllerTest {
 
     @Test
     void shouldGetTradesWithStatusFilter() throws Exception {
-        // Given
         List<CanonicalTrade> trades = Collections.singletonList(sampleTrade);
         when(tradeService.getAllTrades(eq(CanonicalTrade.TradeStatus.RECEIVED))).thenReturn(trades);
 
-        // When & Then
         mockMvc.perform(get("/api/v1/trades")
                         .param("status", "RECEIVED"))
                 .andExpect(status().isOk())
@@ -168,12 +147,10 @@ class TradeControllerTest {
 
     @Test
     void shouldGetTradeStatistics() throws Exception {
-        // Given
         when(tradeService.getTradeStatistics()).thenReturn(
                 java.util.Map.of("totalTrades", 5, "statusCounts", java.util.Map.of("RECEIVED", 3L, "PUBLISHED", 2L))
         );
 
-        // When & Then
         mockMvc.perform(get("/api/v1/trades/statistics"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalTrades").value(5))
@@ -183,7 +160,6 @@ class TradeControllerTest {
 
     @Test
     void shouldClearAllTrades() throws Exception {
-        // When & Then
         mockMvc.perform(delete("/api/v1/trades/clear"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -192,7 +168,6 @@ class TradeControllerTest {
 
     @Test
     void shouldReturnHealthCheck() throws Exception {
-        // When & Then
         mockMvc.perform(get("/api/v1/trades/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
