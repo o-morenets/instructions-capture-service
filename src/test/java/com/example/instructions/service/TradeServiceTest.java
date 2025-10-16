@@ -23,7 +23,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -208,6 +209,62 @@ class TradeServiceTest {
 
         assertThat(tradeIds).hasSize(1);
         assertThat(tradeIds.getFirst()).startsWith("TRADE-");
+    }
+
+    @Test
+    void shouldProcessJsonArrayWithMultipleTrades() throws IOException {
+        // JSON array with 3 trades (same structure as sample-trades-array.json)
+        String jsonArray = """
+                [
+                  {
+                    "accountNumber": "123456789",
+                    "securityId": "ABC123",
+                    "tradeType": "BUY",
+                    "amount": 100000,
+                    "timestamp": "2025-08-04T21:15:33",
+                    "platformId": "ACCT123"
+                  },
+                  {
+                    "accountNumber": "987654321",
+                    "securityId": "XYZ789",
+                    "tradeType": "SELL",
+                    "amount": 50000,
+                    "timestamp": "2025-08-04T21:16:33",
+                    "platformId": "ACCT456"
+                  },
+                  {
+                    "accountNumber": "555666777",
+                    "securityId": "DEF456",
+                    "tradeType": "PURCHASE",
+                    "amount": 75000,
+                    "timestamp": "2025-08-04T21:17:33",
+                    "platformId": "ACCT789"
+                  }
+                ]
+                """;
+
+        when(multipartFile.getOriginalFilename()).thenReturn("sample-trades-array.json");
+        when(multipartFile.getBytes()).thenReturn(jsonArray.getBytes());
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getSize()).thenReturn((long) jsonArray.length());
+
+        doNothing().when(tradeTransformer).validateCanonicalTrade(any());
+        when(tradeTransformer.transformToPlatformTrade(any()))
+                .thenReturn(createSamplePlatformTrade());
+        SendResult<String, PlatformTrade> mockSendResult = mock(SendResult.class);
+        when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
+                .thenReturn(CompletableFuture.completedFuture(mockSendResult));
+
+        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
+
+        // Verify 3 trades were processed
+        assertThat(tradeIds).hasSize(3);
+        assertThat(tradeIds).allMatch(id -> id.startsWith("TRADE-"));
+
+        // Verify transformer was called 3 times
+        verify(tradeTransformer, times(3)).validateCanonicalTrade(any(CanonicalTrade.class));
+        verify(tradeTransformer, times(3)).transformToPlatformTrade(any(CanonicalTrade.class));
+        verify(kafkaPublisher, times(3)).publishTrade(any(PlatformTrade.class));
     }
 
     @Test
