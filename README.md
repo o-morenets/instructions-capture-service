@@ -10,11 +10,12 @@ A Spring Boot microservice that processes trade instructions via file upload and
 - **Data Transformation**: Normalize and mask sensitive data (account numbers, security IDs)
 - **In-Memory Storage**: Fast processing with ConcurrentHashMap-based storage
 - **Kafka Integration**: Consume from `instructions.inbound` and publish to `instructions.outbound`
-- **Security**: Input validation, data masking, and sanitization
+- **JWT Security**: JWT Bearer token authentication for REST API endpoints
+- **Security**: Input validation, data masking, sanitization, and authentication
 - **Performance**: Asynchronous processing with controlled concurrency and backpressure
 - **Memory Efficient**: Stream-based processing for large files (10MB+)
 - **Monitoring**: Health checks, metrics, and comprehensive logging
-- **Documentation**: OpenAPI/Swagger documentation
+- **Documentation**: OpenAPI/Swagger documentation with JWT support
 - **Testing**: Unit, integration, and contract tests
 
 ## 🏗️ Architecture
@@ -202,6 +203,60 @@ account_number,security_id,trade_type,amount,timestamp,platform_id
   - `BUY`, `PURCHASE` → `B`
   - `SELL`, `SALE` → `S`
   - `SHORT`, `SHORT_SELL` → `SS`
+
+## 🔐 Security - JWT Authentication
+
+The service uses JWT Bearer token authentication for all REST API endpoints (except health check and Swagger UI).
+
+### Quick Start
+
+1. **Create `.env` file** (recommended):
+   ```bash
+   # Generate a strong secret
+   openssl rand -base64 64
+   
+   # Create .env file in project root
+   cat > .env << 'EOF'
+   JWT_SECRET=your-generated-secret-here
+   JWT_EXPIRATION=3600000
+   EOF
+   ```
+   
+   The application automatically loads variables from `.env` using `spring-dotenv`.
+
+2. **Alternative: Export environment variables**:
+   ```bash
+   export JWT_SECRET="your-super-secret-key-here"
+   export JWT_EXPIRATION=3600000
+   ```
+
+3. **Generate a Test Token**:
+   ```bash
+   mvn test -Dtest="JwtTokenGeneratorTest#generateTestToken"
+   ```
+
+4. **Use the Token in Requests**:
+   ```bash
+   TOKEN="your-jwt-token-here"
+   
+   curl -H "Authorization: Bearer $TOKEN" \
+        -F "file=@sample-data/sample-trades.csv" \
+        http://localhost:8080/api/v1/trades/upload
+   ```
+
+For detailed environment setup, see [ENV_SETUP.md](ENV_SETUP.md).
+
+### Protected Endpoints
+
+All endpoints require JWT authentication except:
+- `GET /api/v1/trades/health` - Health check
+- `GET /actuator/**` - Actuator endpoints  
+- `GET /swagger-ui/**` - Swagger UI
+- `GET /v3/api-docs/**` - OpenAPI documentation
+
+### Integration with Other Services
+
+For detailed JWT integration guides (Java, Python, Node.js), see [JWT_SECURITY.md](JWT_SECURITY.md).
 
 ## 🧪 Testing
 

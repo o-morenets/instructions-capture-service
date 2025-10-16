@@ -85,6 +85,13 @@ springdoc:
     tagsSorter: alpha
     displayRequestDuration: true
 
+# JWT Configuration
+jwt:
+  # IMPORTANT: Change this secret in production! Use a strong random value (at least 256 bits)
+  # Generate using: openssl rand -base64 64
+  secret: ${JWT_SECRET:YourSecretKeyHereShouldBeAtLeast256BitsLongForHS256AlgorithmToWorkProperly123456789}
+  expiration: ${JWT_EXPIRATION:3600000}  # 1 hour in milliseconds
+
 # Custom application properties
 app:
   processing:
