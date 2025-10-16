@@ -66,7 +66,7 @@ public class KafkaConfig {
     }
 
     /**
-     * Producer factory configured with custom ObjectMapper for proper LocalDateTime serialization
+     * Producer factory configured with custom ObjectMapper for proper Instant serialization
      */
     @Bean
     public ProducerFactory<String, PlatformTrade> producerFactory(ObjectMapper objectMapper) {
@@ -75,7 +75,7 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 
-        // Create JsonSerializer with our custom ObjectMapper that handles LocalDateTime properly
+        // Create JsonSerializer with our custom ObjectMapper that handles Instant properly
         // Pass ObjectMapper in constructor and DON'T use both config properties and setters
         JsonSerializer<PlatformTrade> jsonSerializer = new JsonSerializer<>(objectMapper);
 

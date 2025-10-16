@@ -13,7 +13,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +43,7 @@ class TradeControllerTest {
                 .securityId("ABC123")
                 .tradeType("BUY")
                 .amount(new BigDecimal("100000"))
-                .timestamp(LocalDateTime.of(2025, 8, 4, 21, 15, 33))
+                .timestamp(Instant.parse("2025-08-04T21:15:33Z"))
                 .platformId("ACCT123")
                 .status(CanonicalTrade.TradeStatus.RECEIVED)
                 .build();

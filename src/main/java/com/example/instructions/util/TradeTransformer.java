@@ -5,6 +5,7 @@ import com.example.instructions.model.PlatformTrade;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -45,7 +46,7 @@ public class TradeTransformer {
                     .security(normalizedSecurity)
                     .type(normalizedTradeType)
                     .amount(canonicalTrade.getAmount())
-                    .timestamp(canonicalTrade.getTimestamp())
+                    .timestamp(Instant.from(canonicalTrade.getTimestamp()))
                     .build();
 
             PlatformTrade platformTrade = PlatformTrade.builder()

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * Canonical trade representation - normalized internal format
@@ -39,7 +39,7 @@ public class CanonicalTrade {
     private BigDecimal amount;
 
     @NotNull(message = "Timestamp is required")
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 
     @NotBlank(message = "Platform ID is required")
     private String platformId;
@@ -50,7 +50,7 @@ public class CanonicalTrade {
     private TradeStatus status = TradeStatus.RECEIVED;
 
     @Builder.Default
-    private LocalDateTime processedAt = LocalDateTime.now();
+    private Instant processedAt = Instant.now();
 
     public enum TradeStatus {
         RECEIVED,

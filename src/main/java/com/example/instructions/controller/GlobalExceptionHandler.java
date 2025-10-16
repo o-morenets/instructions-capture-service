@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * Global exception handler for REST controllers.
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> buildResponse(String message, HttpStatus status, String errorCode) {
         return ResponseEntity.status(status)
-                .body(new ErrorResponse(false, message, errorCode, status.value(), LocalDateTime.now()));
+                .body(new ErrorResponse(false, message, errorCode, status.value(), Instant.now()));
     }
 
     /**
@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
             String error,
             String errorCode,
             int status,
-            LocalDateTime timestamp
+            Instant timestamp
     ) {
     }
 }

@@ -4,7 +4,7 @@ import lombok.Builder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * Platform-specific trade format for accounting platform
@@ -33,7 +33,7 @@ public record PlatformTrade(
             BigDecimal amount,
 
             @JsonProperty("timestamp")
-            LocalDateTime timestamp
+            Instant timestamp
     ) {
     }
 }

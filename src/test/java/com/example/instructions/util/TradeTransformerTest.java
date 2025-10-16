@@ -8,7 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -110,7 +110,7 @@ class TradeTransformerTest {
             .securityId("abc123")
             .tradeType("BUY")
             .amount(new BigDecimal("100000"))
-            .timestamp(LocalDateTime.of(2025, 8, 4, 21, 15, 33))
+            .timestamp(Instant.parse("2025-08-04T21:15:33Z"))
             .platformId("ACCT123")
             .build();
 
@@ -124,7 +124,7 @@ class TradeTransformerTest {
         assertThat(tradeDetails.security()).isEqualTo("ABC123");
         assertThat(tradeDetails.type()).isEqualTo("B");
         assertThat(tradeDetails.amount()).isEqualTo(new BigDecimal("100000"));
-        assertThat(tradeDetails.timestamp()).isEqualTo(LocalDateTime.of(2025, 8, 4, 21, 15, 33));
+        assertThat(tradeDetails.timestamp()).isEqualTo(Instant.parse("2025-08-04T21:15:33Z"));
     }
 
     @Test
@@ -135,7 +135,7 @@ class TradeTransformerTest {
             .securityId("ABC123")
             .tradeType("BUY")
             .amount(new BigDecimal("100000"))
-            .timestamp(LocalDateTime.now())
+            .timestamp(Instant.now())
             .platformId("ACCT123")
             .build();
 
@@ -151,11 +151,11 @@ class TradeTransformerTest {
             .securityId("ABC123")
             .tradeType("BUY")
             .amount(new BigDecimal("100000"))
-            .timestamp(LocalDateTime.now())
+            .timestamp(Instant.now())
             .platformId("ACCT123")
             .source("TEST")
             .status(CanonicalTrade.TradeStatus.RECEIVED)
-            .processedAt(LocalDateTime.now())
+            .processedAt(Instant.now())
             .build();
 
         assertThatThrownBy(() -> tradeTransformer.validateCanonicalTrade(null))
@@ -172,11 +172,11 @@ class TradeTransformerTest {
             .securityId(null)
             .tradeType("BUY")
             .amount(new BigDecimal("100000"))
-            .timestamp(LocalDateTime.now())
+            .timestamp(Instant.now())
             .platformId("ACCT123")
             .source("TEST")
             .status(CanonicalTrade.TradeStatus.RECEIVED)
-            .processedAt(LocalDateTime.now())
+            .processedAt(Instant.now())
             .build();
         
         assertThatThrownBy(() -> tradeTransformer.validateCanonicalTrade(invalidTradeSecurityId))

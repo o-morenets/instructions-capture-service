@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -313,7 +313,7 @@ class TradeServiceTest {
                 .securityId("ABC123")
                 .tradeType("BUY")
                 .amount(new BigDecimal("100000"))
-                .timestamp(LocalDateTime.of(2025, 8, 4, 21, 15, 33))
+                .timestamp(Instant.parse("2025-08-04T21:15:33Z"))
                 .platformId("ACCT123")
                 .status(CanonicalTrade.TradeStatus.RECEIVED)
                 .build();
@@ -327,7 +327,7 @@ class TradeServiceTest {
                         .security("ABC123")
                         .type("B")
                         .amount(new BigDecimal("100000"))
-                        .timestamp(LocalDateTime.of(2025, 8, 4, 21, 15, 33))
+                        .timestamp(Instant.parse("2025-08-04T21:15:33Z"))
                         .build())
                 .build();
     }

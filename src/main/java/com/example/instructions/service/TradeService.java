@@ -18,9 +18,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -198,7 +195,7 @@ public class TradeService {
                     .securityId(fields[2].trim())
                     .tradeType(fields[3].trim())
                     .amount(new BigDecimal(fields[4].trim()))
-                    .timestamp(LocalDateTime.ofInstant(Instant.parse(fields[5].trim()), ZoneOffset.UTC))
+                    .timestamp(Instant.parse(fields[5].trim()))
                     .platformId(fields[6].trim())
                     .status(CanonicalTrade.TradeStatus.RECEIVED)
                     .build();
