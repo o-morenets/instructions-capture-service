@@ -117,8 +117,10 @@ class TradeServiceTest {
         tradeService.storeTrade(trade1);
         tradeService.storeTrade(trade2);
 
-        List<CanonicalTrade> receivedTrades = tradeService.getAllTrades(CanonicalTrade.TradeStatus.RECEIVED);
-        List<CanonicalTrade> allTrades = tradeService.getAllTrades(null);
+        List<CanonicalTrade> receivedTrades = tradeService.getAllTrades(CanonicalTrade.TradeStatus.RECEIVED)
+                .collectList().block();
+        List<CanonicalTrade> allTrades = tradeService.getAllTrades(null)
+                .collectList().block();
 
         assertThat(receivedTrades).hasSize(1);
         assertThat(receivedTrades.getFirst().getStatus()).isEqualTo(CanonicalTrade.TradeStatus.RECEIVED);
@@ -289,11 +291,11 @@ class TradeServiceTest {
     @Test
     void shouldClearAllTrades() {
         tradeService.storeTrade(createSampleCanonicalTrade());
-        assertThat(tradeService.getAllTrades(null)).isNotEmpty();
+        assertThat(tradeService.getAllTrades(null).collectList().block()).isNotEmpty();
 
         tradeService.clearAllTrades();
 
-        assertThat(tradeService.getAllTrades(null)).isEmpty();
+        assertThat(tradeService.getAllTrades(null).collectList().block()).isEmpty();
     }
 
     private CanonicalTrade createSampleCanonicalTrade() {

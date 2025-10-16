@@ -9,13 +9,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
-
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -124,25 +123,25 @@ class TradeControllerTest {
 
     @Test
     void shouldGetAllTrades() throws Exception {
-        List<CanonicalTrade> trades = Collections.singletonList(sampleTrade);
+        Flux<CanonicalTrade> trades = Flux.just(sampleTrade);
         when(tradeService.getAllTrades(null)).thenReturn(trades);
 
         mockMvc.perform(get("/api/v1/trades"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].tradeId").value("TRADE-123"));
+                .andExpect(header().string("Content-Type", "application/x-ndjson"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("TRADE-123")));
     }
 
     @Test
     void shouldGetTradesWithStatusFilter() throws Exception {
-        List<CanonicalTrade> trades = Collections.singletonList(sampleTrade);
+        Flux<CanonicalTrade> trades = Flux.just(sampleTrade);
         when(tradeService.getAllTrades(eq(CanonicalTrade.TradeStatus.RECEIVED))).thenReturn(trades);
 
         mockMvc.perform(get("/api/v1/trades")
                         .param("status", "RECEIVED"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].status").value("RECEIVED"));
+                .andExpect(header().string("Content-Type", "application/x-ndjson"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("RECEIVED")));
     }
 
     @Test
