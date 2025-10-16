@@ -61,43 +61,33 @@ public class TradeController {
         log.info("Received reactive file upload request: {} (size: {} bytes)",
                 file.getOriginalFilename(), file.getSize());
 
-        try {
-            // Validate file
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("File is empty"));
-            }
-
-            String filename = file.getOriginalFilename();
-            if (filename == null || (!filename.toLowerCase().endsWith(".csv") &&
-                    !filename.toLowerCase().endsWith(".json"))) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Only CSV and JSON files are supported"));
-            }
-
-            // Process reactively and block to get result (for MVC controller)
-            List<String> tradeIds = tradeService.processFileUploadReactive(file)
-                    .block(); // Block to bridge reactive to imperative
-
-            int tradeCount = tradeIds != null ? tradeIds.size() : 0;
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "File processed successfully");
-            response.put("filename", filename);
-            response.put("tradesProcessed", tradeCount);
-
-            log.info("Successfully processed file upload: {} with {} trades",
-                    filename, tradeCount);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error processing file upload: {}", e.getMessage(), e);
-
-            return ResponseEntity.status(500)
-                    .body(createErrorResponse("Failed to process file: " + e.getMessage()));
+        // Validate file - throw exceptions, let GlobalExceptionHandler handle them
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
         }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.toLowerCase().endsWith(".csv") &&
+                !filename.toLowerCase().endsWith(".json"))) {
+            throw new IllegalArgumentException("Only CSV and JSON files are supported");
+        }
+
+        // Process reactively and block to get result (for MVC controller)
+        List<String> tradeIds = tradeService.processFileUploadReactive(file)
+                .block(); // Block to bridge reactive to imperative
+
+        int tradeCount = tradeIds != null ? tradeIds.size() : 0;
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "File processed successfully");
+        response.put("filename", filename);
+        response.put("tradesProcessed", tradeCount);
+
+        log.info("Successfully processed file upload: {} with {} trades",
+                filename, tradeCount);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -191,17 +181,5 @@ public class TradeController {
         Map<String, Object> stats = tradeService.getTradeStatistics();
 
         return ResponseEntity.ok(stats);
-    }
-
-    /**
-     * Create error response map
-     */
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("success", false);
-        error.put("error", message);
-        error.put("timestamp", System.currentTimeMillis());
-
-        return error;
     }
 }

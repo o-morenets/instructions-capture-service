@@ -88,7 +88,9 @@ class TradeControllerTest {
                         .file(emptyFile))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error").value("File is empty"));
+                .andExpect(jsonPath("$.error").value("Validation failed: File is empty"))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -99,7 +101,9 @@ class TradeControllerTest {
                         .file(invalidFile))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error").value("Only CSV and JSON files are supported"));
+                .andExpect(jsonPath("$.error").value("Validation failed: Only CSV and JSON files are supported"))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
