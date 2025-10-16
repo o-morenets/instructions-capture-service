@@ -64,10 +64,11 @@ class TradeServiceTest {
     }
 
     @Test
-    void shouldGenerateTradeIdWhenNull() {
+    void shouldStoreTradeWithUUID() {
         CanonicalTrade baseTrade = createSampleCanonicalTrade();
+        String uuid = "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d";
         CanonicalTrade trade = CanonicalTrade.builder()
-                .tradeId(null)
+                .tradeId(uuid)
                 .accountNumber(baseTrade.getAccountNumber())
                 .securityId(baseTrade.getSecurityId())
                 .tradeType(baseTrade.getTradeType())
@@ -82,7 +83,7 @@ class TradeServiceTest {
         CanonicalTrade storedTrade = tradeService.storeTrade(trade);
 
         assertThat(storedTrade.getTradeId()).isNotNull();
-        assertThat(storedTrade.getTradeId()).startsWith("TRADE-");
+        assertThat(storedTrade.getTradeId()).isEqualTo(uuid);
     }
 
     @Test
@@ -167,9 +168,9 @@ class TradeServiceTest {
 
     @Test
     void shouldProcessCsvFile() throws IOException {
-        String csvContent = "account_number,security_id,trade_type,amount,timestamp,platform_id\n" +
-                "123456789,ABC123,BUY,100000,2025-08-04 21:15:33,ACCT123\n" +
-                "987654321,XYZ789,SELL,50000,2025-08-04 21:16:33,ACCT456";
+        String csvContent = "trade_id,account_number,security_id,trade_type,amount,timestamp,platform_id\n" +
+                "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d,123456789,ABC123,BUY,100000,2025-08-04T21:15:33Z,ACCT123\n" +
+                "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e,987654321,XYZ789,SELL,50000,2025-08-04T21:16:33Z,ACCT456";
 
         when(multipartFile.getOriginalFilename()).thenReturn("trades.csv");
         when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(csvContent.getBytes()));
@@ -186,13 +187,13 @@ class TradeServiceTest {
         List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
         assertThat(tradeIds).hasSize(2);
-        assertThat(tradeIds).allMatch(id -> id.startsWith("TRADE-"));
+        assertThat(tradeIds).contains("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d", "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e");
     }
 
     @Test
     void shouldProcessJsonFile() throws IOException {
-        String jsonContent = "{\"accountNumber\":\"123456789\",\"securityId\":\"ABC123\"," +
-                "\"tradeType\":\"BUY\",\"amount\":100000,\"timestamp\":\"2025-08-04T21:15:33\"," +
+        String jsonContent = "{\"tradeId\":\"a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d\",\"accountNumber\":\"123456789\",\"securityId\":\"ABC123\"," +
+                "\"tradeType\":\"BUY\",\"amount\":100000,\"timestamp\":\"2025-08-04T21:15:33Z\"," +
                 "\"platformId\":\"ACCT123\"}";
 
         when(multipartFile.getOriginalFilename()).thenReturn("trade.json");
@@ -210,7 +211,7 @@ class TradeServiceTest {
         List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
 
         assertThat(tradeIds).hasSize(1);
-        assertThat(tradeIds.getFirst()).startsWith("TRADE-");
+        assertThat(tradeIds.getFirst()).isEqualTo("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d");
     }
 
     @Test
@@ -219,27 +220,30 @@ class TradeServiceTest {
         String jsonArray = """
                 [
                   {
+                    "tradeId": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
                     "accountNumber": "123456789",
                     "securityId": "ABC123",
                     "tradeType": "BUY",
                     "amount": 100000,
-                    "timestamp": "2025-08-04T21:15:33",
+                    "timestamp": "2025-08-04T21:15:33Z",
                     "platformId": "ACCT123"
                   },
                   {
+                    "tradeId": "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e",
                     "accountNumber": "987654321",
                     "securityId": "XYZ789",
                     "tradeType": "SELL",
                     "amount": 50000,
-                    "timestamp": "2025-08-04T21:16:33",
+                    "timestamp": "2025-08-04T21:16:33Z",
                     "platformId": "ACCT456"
                   },
                   {
+                    "tradeId": "c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f",
                     "accountNumber": "555666777",
                     "securityId": "DEF456",
                     "tradeType": "PURCHASE",
                     "amount": 75000,
-                    "timestamp": "2025-08-04T21:17:33",
+                    "timestamp": "2025-08-04T21:17:33Z",
                     "platformId": "ACCT789"
                   }
                 ]
@@ -261,7 +265,11 @@ class TradeServiceTest {
 
         // Verify 3 trades were processed
         assertThat(tradeIds).hasSize(3);
-        assertThat(tradeIds).allMatch(id -> id.startsWith("TRADE-"));
+        assertThat(tradeIds).contains(
+                "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+                "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e",
+                "c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f"
+        );
 
         // Verify transformer was called 3 times
         verify(tradeTransformer, times(3)).validateCanonicalTrade(any(CanonicalTrade.class));

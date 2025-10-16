@@ -79,18 +79,11 @@ public class TradeService {
      * Store trade in memory
      */
     public CanonicalTrade storeTrade(CanonicalTrade trade) {
-        if (trade.getTradeId() == null) {
-            trade.setTradeId(generateTradeId());
-        }
         tradeStorage.put(trade.getTradeId(), trade);
 
         log.debug("Stored trade in memory: {}", trade.getTradeId());
 
         return trade;
-    }
-
-    private String generateTradeId() {
-        return "TRADE-" + System.currentTimeMillis() + "-" + tradeIdCounter.getAndIncrement();
     }
 
     private void updateTrade(CanonicalTrade trade) {
@@ -193,20 +186,20 @@ public class TradeService {
     private CanonicalTrade parseCsvLine(String line) {
         try {
             String[] fields = line.split(",");
-            if (fields.length != 6) {
-                log.warn("Skipping invalid CSV line (expected 6 fields, got {}): {}",
+            if (fields.length != 7) {
+                log.warn("Skipping invalid CSV line (expected 7 fields, got {}): {}",
                         fields.length, line);
                 return null;
             }
 
             return CanonicalTrade.builder()
-                    .tradeId(generateTradeId())
-                    .accountNumber(fields[0].trim())
-                    .securityId(fields[1].trim())
-                    .tradeType(fields[2].trim())
-                    .amount(new BigDecimal(fields[3].trim()))
-                    .timestamp(LocalDateTime.ofInstant(Instant.parse(fields[4].trim()), ZoneOffset.UTC))
-                    .platformId(fields[5].trim())
+                    .tradeId(fields[0].trim())
+                    .accountNumber(fields[1].trim())
+                    .securityId(fields[2].trim())
+                    .tradeType(fields[3].trim())
+                    .amount(new BigDecimal(fields[4].trim()))
+                    .timestamp(LocalDateTime.ofInstant(Instant.parse(fields[5].trim()), ZoneOffset.UTC))
+                    .platformId(fields[6].trim())
                     .status(CanonicalTrade.TradeStatus.RECEIVED)
                     .build();
         } catch (Exception e) {
@@ -252,9 +245,6 @@ public class TradeService {
     }
 
     private CanonicalTrade processJsonTrade(CanonicalTrade trade) {
-        if (trade.getTradeId() == null || trade.getTradeId().trim().isEmpty()) {
-            trade.setTradeId(generateTradeId());
-        }
         if (trade.getStatus() == null) {
             trade.setStatus(CanonicalTrade.TradeStatus.RECEIVED);
         }
