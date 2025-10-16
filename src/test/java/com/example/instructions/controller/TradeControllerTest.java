@@ -84,6 +84,10 @@ class TradeControllerTest {
     void shouldRejectEmptyFile() throws Exception {
         MockMultipartFile emptyFile = new MockMultipartFile("file", "empty.csv", "text/csv", new byte[0]);
 
+        // Mock service to throw IllegalArgumentException like it does in real code
+        when(tradeService.processFileUploadReactive(any()))
+                .thenReturn(Mono.error(new IllegalArgumentException("File is empty")));
+
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(emptyFile))
                 .andExpect(status().isBadRequest())
@@ -97,11 +101,15 @@ class TradeControllerTest {
     void shouldRejectUnsupportedFileFormat() throws Exception {
         MockMultipartFile invalidFile = new MockMultipartFile("file", "invalid.txt", "text/plain", "content".getBytes());
 
+        // Mock service to throw IllegalArgumentException like it does in real code
+        when(tradeService.processFileUploadReactive(any()))
+                .thenReturn(Mono.error(new IllegalArgumentException("Unsupported file format. Only CSV and JSON files are accepted.")));
+
         mockMvc.perform(multipart("/api/v1/trades/upload")
                         .file(invalidFile))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error").value("Validation failed: Only CSV and JSON files are supported"))
+                .andExpect(jsonPath("$.error").value("Validation failed: Unsupported file format. Only CSV and JSON files are accepted."))
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.status").value(400));
     }

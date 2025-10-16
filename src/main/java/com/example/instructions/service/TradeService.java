@@ -69,7 +69,6 @@ public class TradeService {
 
     /**
      * Process file upload using reactive Flux streaming
-     * Benefits: Non-blocking I/O, backpressure control, memory efficient for large files
      */
     public Mono<List<String>> processFileUploadReactive(MultipartFile file) {
         log.info("Processing file upload reactively: {} (size: {} bytes)",
