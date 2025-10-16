@@ -127,8 +127,7 @@ public class TradeTransformer {
             }
         }
 
-        // If no mapping found, return first character as fallback
-        // but log a warning
+        // If no mapping found, return first character as fallback, but log a warning
         log.warn("Unknown trade type '{}', using first character as fallback", tradeType);
 
         return upperTradeType.substring(0, 1);

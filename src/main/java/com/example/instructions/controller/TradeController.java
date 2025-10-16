@@ -140,21 +140,6 @@ public class TradeController {
     }
 
     /**
-     * Health check endpoint
-     */
-    @GetMapping("/health")
-    @Operation(summary = "Health check", description = "Check if the trade processing service is healthy")
-    @ApiResponse(responseCode = "200", description = "Service is healthy")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        Map<String, Object> health = new HashMap<>();
-        health.put("status", "UP");
-        health.put("service", "instructions-capture-service");
-        health.put("timestamp", System.currentTimeMillis());
-
-        return ResponseEntity.ok(health);
-    }
-
-    /**
      * Get trade processing statistics
      */
     @GetMapping("/statistics")
@@ -169,5 +154,20 @@ public class TradeController {
         Map<String, Object> stats = tradeService.getTradeStatistics();
 
         return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Health check endpoint
+     */
+    @GetMapping("/health")
+    @Operation(summary = "Health check", description = "Check if the trade processing service is healthy")
+    @ApiResponse(responseCode = "200", description = "Service is healthy")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("service", "instructions-capture-service");
+        health.put("timestamp", System.currentTimeMillis());
+
+        return ResponseEntity.ok(health);
     }
 }
