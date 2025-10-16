@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * Platform-specific trade format for accounting platform
- * Matches the required JSON output structure
  */
 @Builder
 public record PlatformTrade(
@@ -19,7 +18,6 @@ public record PlatformTrade(
         @JsonProperty("trade")
         TradeDetails trade
 ) {
-
     @Builder
     public record TradeDetails(
             @JsonProperty("account")
@@ -37,6 +35,5 @@ public record PlatformTrade(
             @JsonProperty("timestamp")
             LocalDateTime timestamp
     ) {
-
     }
 }

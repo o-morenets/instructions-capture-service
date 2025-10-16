@@ -263,7 +263,7 @@ public class TradeService {
                 })
                 .onErrorResume(error -> {
                     // Handle errors during validation/transformation
-                    log.error("Error processing trade {}: {}", 
+                    log.error("Error processing trade {}: {}",
                             trade.getTradeId(), error.getMessage(), error);
                     trade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                     // Return empty to skip this trade but continue processing others
@@ -362,14 +362,15 @@ public class TradeService {
     /**
      * Get all trades with optional status filter
      */
-    public List<CanonicalTrade> getAllTrades(CanonicalTrade.TradeStatus status) {
+    public Flux<CanonicalTrade> getAllTrades(CanonicalTrade.TradeStatus status) {
         if (status == null) {
-            return new ArrayList<>(tradeStorage.values());
+            return Flux.fromIterable(tradeStorage.values());
         }
 
-        return tradeStorage.values().stream()
+        return Flux.fromIterable(tradeStorage.values().stream()
                 .filter(trade -> trade.getStatus() == status)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList())
+        );
     }
 
     /**

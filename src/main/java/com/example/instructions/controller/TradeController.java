@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.List;
@@ -102,19 +103,19 @@ public class TradeController {
     /**
      * Get all trades with optional status filter
      */
-    @GetMapping
+    @GetMapping(produces = "application/x-ndjson")
     @Operation(
             summary = "Get all trades with optional status filter",
             description = "Retrieve all trades, optionally filtered by status"
     )
     @ApiResponse(responseCode = "200", description = "Trades retrieved successfully")
-    public ResponseEntity<List<CanonicalTrade>> getAllTrades(
+    public ResponseEntity<Flux<CanonicalTrade>> getAllTrades(
             @Parameter(description = "Filter by trade status (optional)")
             @RequestParam(value = "status", required = false) CanonicalTrade.TradeStatus status) {
 
         log.debug("Getting all trades with status filter: {}", status);
 
-        List<CanonicalTrade> trades = tradeService.getAllTrades(status);
+        Flux<CanonicalTrade> trades = tradeService.getAllTrades(status);
 
         return ResponseEntity.ok(trades);
     }
