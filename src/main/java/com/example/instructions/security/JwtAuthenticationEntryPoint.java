@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Entry point for handling authentication errors
- * Returns JSON error response instead of redirecting to login page
+ * Returns JSON error response instead of redirecting to the login page
  */
 @Slf4j
 @Component

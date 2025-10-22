@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Platform-specific trade format for accounting platform
+ * Platform-specific trade format for an accounting platform
  */
 @Builder
 public record PlatformTrade(

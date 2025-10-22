@@ -13,8 +13,8 @@ import java.time.Instant;
  * Global exception handler for REST controllers.
  * Provides consistent, structured JSON error responses.
  */
-@Slf4j
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**

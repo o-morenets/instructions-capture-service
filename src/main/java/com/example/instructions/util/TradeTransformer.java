@@ -68,7 +68,7 @@ public class TradeTransformer {
     }
 
     /**
-     * Mask account number showing only last 4 digits
+     * Mask account number showing only the last 4 digits
      * Example: "123456789" -> "*****6789"
      */
     public String maskAccountNumber(String accountNumber) {
@@ -89,7 +89,7 @@ public class TradeTransformer {
     }
 
     /**
-     * Normalize security ID to uppercase and validate format
+     * Normalize security ID to uppercase and validate a format
      */
     public String normalizeSecurityId(String securityId) {
         if (securityId == null || securityId.trim().isEmpty()) {
@@ -128,7 +128,7 @@ public class TradeTransformer {
             }
         }
 
-        // If no mapping found, return first character as fallback, but log a warning
+        // If no mapping found, return the first character as fallback, but log a warning
         log.warn("Unknown trade type '{}', using first character as fallback", tradeType);
 
         return upperTradeType.substring(0, 1);

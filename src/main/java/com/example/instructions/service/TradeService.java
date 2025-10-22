@@ -20,15 +20,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
  * Core service for processing trade instructions
  * Handles in-memory storage and transformation
  */
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TradeService {
 
@@ -40,8 +39,6 @@ public class TradeService {
      * In-memory storage for canonical trades
      */
     private final Map<String, CanonicalTrade> tradeStorage = new ConcurrentHashMap<>();
-
-    private final AtomicLong tradeIdCounter = new AtomicLong(1);
 
     /**
      * Process trade instruction (async for Kafka listener)
@@ -122,7 +119,7 @@ public class TradeService {
                 return Mono.error(new IllegalArgumentException("File name cannot be null"));
             }
 
-            // Determine file type and create appropriate Flux
+            // Determine a file type and create the appropriate Flux
             Flux<CanonicalTrade> tradeFlux;
 
             if (filename.toLowerCase().endsWith(".csv")) {
@@ -219,14 +216,14 @@ public class TradeService {
                         // Check if it's an array or single object
                         if (content.startsWith("[")) {
 
-                            // Parse as array
+                            // Parse as an array
                             CanonicalTrade[] trades = objectMapper.readValue(content, CanonicalTrade[].class);
                             log.debug("Parsed {} trades from JSON array", trades.length);
 
                             return Arrays.asList(trades);
                         } else if (content.startsWith("{")) {
 
-                            // Parse as single object
+                            // Parse as a single object
                             CanonicalTrade trade = objectMapper.readValue(content, CanonicalTrade.class);
                             log.debug("Parsed 1 trade from JSON object");
 
@@ -292,7 +289,7 @@ public class TradeService {
     }
 
     /**
-     * Get all trades with optional status filter
+     * Get all trades with an optional status filter
      */
     public Flux<CanonicalTrade> getAllTrades(CanonicalTrade.TradeStatus status) {
         if (status == null) {

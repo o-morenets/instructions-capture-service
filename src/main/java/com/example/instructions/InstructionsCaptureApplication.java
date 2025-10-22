@@ -30,7 +30,6 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,7 +63,7 @@ public class InstructionsCaptureApplication {
     }
 
     /**
-     * Create inbound topic for receiving trade instructions
+     * Create an inbound topic for receiving trade instructions
      */
     @Bean
     public NewTopic inboundTopic() {
@@ -76,7 +75,7 @@ public class InstructionsCaptureApplication {
     }
 
     /**
-     * Create outbound topic for publishing transformed trades
+     * Create an outbound topic for publishing transformed trades
      */
     @Bean
     public NewTopic outboundTopic() {
@@ -134,9 +133,12 @@ public class InstructionsCaptureApplication {
                 .info(new Info()
                         .title("Instructions Capture Service API")
                         .version("1.0.0")
-                        .description("Spring Boot microservice for processing trade instructions via file upload and Kafka messaging. " +
-                                "Converts inputs to canonical format, applies transformations, and publishes to accounting platforms. " +
-                                "\n\n**Authentication:** All endpoints except health check and Swagger UI require JWT Bearer token authentication.")
+                        .description("""
+                                Spring Boot microservice for processing trade instructions via file upload and Kafka messaging. \
+                                Converts inputs to canonical format, applies transformations, and publishes to accounting platforms. \
+                                
+                                
+                                **Authentication:** All endpoints except health check and Swagger UI require JWT Bearer token authentication.""")
                         .contact(new Contact()
                                 .name("Oleksii Morenets")
                                 .email("oleksii.morenets@gmail.com"))

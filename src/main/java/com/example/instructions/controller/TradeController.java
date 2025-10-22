@@ -26,9 +26,9 @@ import java.util.Optional;
  * REST Controller for trade instruction processing
  * Handles file uploads and trade management operations
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/trades")
+@Slf4j
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Trade Instructions", description = "API for processing trade instructions via file upload")
@@ -78,7 +78,7 @@ public class TradeController {
     }
 
     /**
-     * Get all trades with optional status filter
+     * Get all trades with an optional status filter
      */
     @GetMapping(produces = "application/x-ndjson")
     @Operation(

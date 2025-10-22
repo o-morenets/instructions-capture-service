@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * JWT Authentication Filter
- * Intercepts every request and validates JWT token from Authorization header
+ * Intercepts every request and validates JWT token from the Authorization header
  */
 @Slf4j
 @Component
@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String username = null;
         String jwt = null;
 
-        // Extract JWT from Authorization header
+        // Extract JWT from the Authorization header
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {

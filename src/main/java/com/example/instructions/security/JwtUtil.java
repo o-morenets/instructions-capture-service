@@ -26,14 +26,14 @@ public class JwtUtil {
     private String secret;
 
     /**
-     * Get signing key from secret
+     * Get a signing key from secret
      */
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-     * Extract username (subject) from token
+     * Extract username (subject) from a token
      */
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -55,7 +55,7 @@ public class JwtUtil {
     }
 
     /**
-     * Extract all claims from token
+     * Extract all claims from a token
      */
     private Claims extractAllClaims(String token) {
         try {
@@ -80,7 +80,7 @@ public class JwtUtil {
     }
 
     /**
-     * Check if token is expired
+     * Check if the token is expired
      */
     public Boolean isTokenExpired(String token) {
         try {

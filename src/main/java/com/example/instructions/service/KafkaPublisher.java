@@ -17,8 +17,8 @@ import static com.example.instructions.InstructionsCaptureApplication.OUTBOUND_T
  * Service for publishing transformed trades to Kafka
  * Handles asynchronous publishing with retry logic
  */
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class KafkaPublisher {
 
@@ -26,7 +26,7 @@ public class KafkaPublisher {
 
     /**
      * Publish platform trade to outbound Kafka topic
-     * Uses asynchronous publishing with retry mechanism
+     * Uses asynchronous publishing with a retry mechanism
      */
     @Retryable(
             retryFor = {Exception.class},

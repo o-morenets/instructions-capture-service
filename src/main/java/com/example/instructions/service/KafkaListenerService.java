@@ -15,8 +15,8 @@ import static com.example.instructions.InstructionsCaptureApplication.INBOUND_TO
  * Service for consuming trade instructions from Kafka
  * Processes incoming messages and delegates to TradeService
  */
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class KafkaListenerService {
 
@@ -24,7 +24,7 @@ public class KafkaListenerService {
 
     /**
      * Listen to inbound trade instructions from Kafka topic
-     * Simple processing - no retries, errors are logged and message continues
+     * Simple processing - no retries, errors are logged and the message continues
      */
     @KafkaListener(topics = INBOUND_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
     public void handleTradeInstruction(
@@ -55,7 +55,7 @@ public class KafkaListenerService {
             log.error("Error processing trade instruction from Kafka - Trade ID: {}, Error: {}",
                     canonicalTrade.getTradeId(), e.getMessage(), e);
             
-            // Store failed trade for manual review
+            // Store failed to trade for manual review
             try {
                 canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                 tradeService.storeTrade(canonicalTrade);
@@ -65,7 +65,7 @@ public class KafkaListenerService {
                         canonicalTrade.getTradeId(), storageException.getMessage());
             }
             
-            // Don't throw - let message be auto-committed and continue
+            // Don't throw - let a message be auto-committed and continue
         }
     }
 }

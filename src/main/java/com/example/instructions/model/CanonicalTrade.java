@@ -11,7 +11,7 @@ import java.time.Instant;
 
 /**
  * Canonical trade representation - normalized internal format
- * Used as intermediate format before platform-specific transformation
+ * Used as an intermediate format before platform-specific transformation
  */
 @Getter
 @Setter
