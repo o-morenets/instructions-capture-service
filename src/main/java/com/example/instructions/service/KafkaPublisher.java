@@ -1,6 +1,5 @@
 package com.example.instructions.service;
 
-import com.example.instructions.config.KafkaConfig;
 import com.example.instructions.model.PlatformTrade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +10,8 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
+
+import static com.example.instructions.InstructionsCaptureApplication.OUTBOUND_TOPIC;
 
 /**
  * Service for publishing transformed trades to Kafka
@@ -34,28 +35,26 @@ public class KafkaPublisher {
     public CompletableFuture<SendResult<String, PlatformTrade>> publishTrade(PlatformTrade platformTrade) {
         String key = platformTrade.platformId();
 
-        log.info("Publishing trade to Kafka topic: {} with key: {}",
-                KafkaConfig.OUTBOUND_TOPIC, key);
+        log.info("Publishing trade to Kafka topic: {} with key: {}", OUTBOUND_TOPIC, key);
 
         try {
             CompletableFuture<SendResult<String, PlatformTrade>> future =
-                    kafkaTemplate.send(KafkaConfig.OUTBOUND_TOPIC, key, platformTrade);
+                    kafkaTemplate.send(OUTBOUND_TOPIC, key, platformTrade);
 
             future.whenComplete((result, ex) -> {
                 if (ex != null) {
                     log.error("Failed to publish trade with key: {} to topic: {}. Error: {}",
-                            key, KafkaConfig.OUTBOUND_TOPIC, ex.getMessage());
+                            key, OUTBOUND_TOPIC, ex.getMessage());
                 } else {
                     log.info("Successfully published trade with key: {} to topic: {} at offset: {}",
-                            key, KafkaConfig.OUTBOUND_TOPIC, result.getRecordMetadata().offset());
+                            key, OUTBOUND_TOPIC, result.getRecordMetadata().offset());
                 }
             });
 
             return future;
-
         } catch (Exception e) {
             log.error("Error publishing trade with key: {} to topic: {}. Error: {}",
-                    key, KafkaConfig.OUTBOUND_TOPIC, e.getMessage());
+                    key, OUTBOUND_TOPIC, e.getMessage());
             throw e;
         }
     }

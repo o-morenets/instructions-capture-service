@@ -1,6 +1,5 @@
 package com.example.instructions.service;
 
-import com.example.instructions.config.KafkaConfig;
 import com.example.instructions.model.CanonicalTrade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +8,8 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+
+import static com.example.instructions.InstructionsCaptureApplication.INBOUND_TOPIC;
 
 /**
  * Service for consuming trade instructions from Kafka
@@ -25,7 +26,7 @@ public class KafkaListenerService {
      * Listen to inbound trade instructions from Kafka topic
      * Simple processing - no retries, errors are logged and message continues
      */
-    @KafkaListener(topics = KafkaConfig.INBOUND_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = INBOUND_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
     public void handleTradeInstruction(
             @Payload(required = false) CanonicalTrade canonicalTrade,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,

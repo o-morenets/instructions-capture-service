@@ -72,8 +72,7 @@ public class TradeController {
         response.put("filename", filename);
         response.put("tradesProcessed", tradeCount);
 
-        log.info("Successfully processed file upload: {} with {} trades",
-                filename, tradeCount);
+        log.info("Successfully processed file upload: {} with {} trades", filename, tradeCount);
 
         return ResponseEntity.ok(response);
     }

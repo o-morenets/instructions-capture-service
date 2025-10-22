@@ -108,10 +108,10 @@ public class TradeService {
      * Process file upload using reactive Flux streaming
      */
     public Mono<List<String>> processFileUploadReactive(MultipartFile file) {
-        log.info("Processing file upload reactively: {} (size: {} bytes)",
-                file.getOriginalFilename(), file.getSize());
+        log.info("Processing file upload reactively: {} (size: {} bytes)", file.getOriginalFilename(), file.getSize());
 
         return Mono.defer(() -> {
+
             // Validate file
             if (file.isEmpty() || file.getSize() == 0) {
                 return Mono.error(new IllegalArgumentException("File is empty"));
@@ -139,23 +139,23 @@ public class TradeService {
                     .doOnNext(trade -> trade.setSource("FILE_UPLOAD"))
                     .flatMap(trade -> processTradeReactive(trade)
                                     .onErrorResume(error -> {
-                                        log.error("Error processing trade {}: {}",
-                                                trade.getTradeId(), error.getMessage());
+                                        log.error("Error processing trade {}: {}", trade.getTradeId(), error.getMessage());
+
                                         return Mono.empty(); // Skip failed trades
                                     }),
                             8) // Concurrency level - process 8 trades in parallel
                     .map(CanonicalTrade::getTradeId)
                     .collectList()
-                    .doOnSuccess(tradeIds ->
-                            log.info("Successfully processed {} trades from file: {}",
-                                    tradeIds.size(), filename))
                     .doOnError(error ->
-                            log.error("Error processing file upload: {}", error.getMessage(), error));
+                            log.error("Error processing file upload: {}", error.getMessage(), error))
+                    .doOnSuccess(tradeIds ->
+                            log.info("Successfully processed {} trades from file: {}", tradeIds.size(), filename));
         });
     }
 
     private Flux<CanonicalTrade> processCsvFileReactive(MultipartFile file) {
         return Flux.using(
+
                 // Resource factory - open the file
                 () -> {
                     try {
@@ -164,11 +164,13 @@ public class TradeService {
                         throw new RuntimeException("Failed to open CSV file", e);
                     }
                 },
+
                 // Stream factory - create Flux from lines
                 reader -> Flux.fromStream(reader.lines())
                         .skip(1) // Skip header
                         .flatMap(line -> Mono.justOrEmpty(parseCsvLine(line)))
                         .subscribeOn(Schedulers.boundedElastic()), // Use IO thread pool
+
                 // Resource cleanup
                 reader -> {
                     try {
@@ -210,7 +212,6 @@ public class TradeService {
         return Mono.fromCallable(() -> {
                     try {
                         byte[] bytes = file.getBytes();
-
                         String content = new String(bytes).trim();
 
                         log.debug("Parsing JSON content (length: {})", content.length());
@@ -221,12 +222,14 @@ public class TradeService {
                             // Parse as array
                             CanonicalTrade[] trades = objectMapper.readValue(content, CanonicalTrade[].class);
                             log.debug("Parsed {} trades from JSON array", trades.length);
+
                             return Arrays.asList(trades);
                         } else if (content.startsWith("{")) {
 
                             // Parse as single object
                             CanonicalTrade trade = objectMapper.readValue(content, CanonicalTrade.class);
                             log.debug("Parsed 1 trade from JSON object");
+
                             return List.of(trade);
                         } else {
                             throw new IllegalArgumentException("Invalid JSON format");

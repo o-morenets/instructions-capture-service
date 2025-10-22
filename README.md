@@ -73,13 +73,6 @@ spring.profiles.active: docker
 kafka.bootstrap-servers: kafka:9092
 ```
 
-### Production (`production`)
-```yaml
-spring.profiles.active: production
-kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-logging.level.com.example.instructions: INFO
-```
-
 ## 🚀 Quick Start
 
 ### 1. Start Kafka (Local Development)
@@ -123,11 +116,13 @@ open http://localhost:8080/swagger-ui.html
 ```bash
 # Upload CSV file
 curl -X POST "http://localhost:8080/api/v1/trades/upload" \
+     -H "Authorization: Bearer $TOKEN" \
      -H "Content-Type: multipart/form-data" \
      -F "file=@sample-trades.csv"
 
 # Upload JSON file
 curl -X POST "http://localhost:8080/api/v1/trades/upload" \
+     -H "Authorization: Bearer $TOKEN" \
      -H "Content-Type: multipart/form-data" \
      -F "file=@sample-trade.json"
 ```
@@ -135,19 +130,25 @@ curl -X POST "http://localhost:8080/api/v1/trades/upload" \
 ### Trade Management
 ```bash
 # Get all trades
-curl http://localhost:8080/api/v1/trades
+curl -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8080/api/v1/trades
 
 # Get trade by ID
-curl http://localhost:8080/api/v1/trades/TRADE-123
+curl -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8080/api/v1/trades/TRADE-123
 
 # Get trades by status
-curl "http://localhost:8080/api/v1/trades?status=RECEIVED"
+curl -H "Authorization: Bearer $TOKEN" \
+     "http://localhost:8080/api/v1/trades?status=RECEIVED"
 
 # Get statistics
-curl http://localhost:8080/api/v1/trades/statistics
+curl -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8080/api/v1/trades/statistics
 
 # Clear all trades (testing)
-curl -X DELETE http://localhost:8080/api/v1/trades/clear
+curl -X DELETE \
+     -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8080/api/v1/trades/clear
 ```
 
 ## 📄 Data Formats
@@ -218,7 +219,6 @@ The service uses JWT Bearer token authentication for all REST API endpoints (exc
    # Create .env file in project root
    cat > .env << 'EOF'
    JWT_SECRET=your-generated-secret-here
-   JWT_EXPIRATION=3600000
    EOF
    ```
    
@@ -227,7 +227,6 @@ The service uses JWT Bearer token authentication for all REST API endpoints (exc
 2. **Alternative: Export environment variables**:
    ```bash
    export JWT_SECRET="your-super-secret-key-here"
-   export JWT_EXPIRATION=3600000
    ```
 
 3. **Generate a Test Token**:
@@ -255,8 +254,6 @@ All endpoints require JWT authentication except:
 - `GET /v3/api-docs/**` - OpenAPI documentation
 
 ### Integration with Other Services
-
-For detailed JWT integration guides (Java, Python, Node.js), see [JWT_SECURITY.md](JWT_SECURITY.md).
 
 ## 🧪 Testing
 

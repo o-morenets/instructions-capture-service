@@ -25,9 +25,6 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration:3600000}") // Default 1 hour
-    private Long expiration;
-
     /**
      * Get signing key from secret
      */
@@ -91,14 +88,6 @@ public class JwtUtil {
         } catch (ExpiredJwtException e) {
             return true;
         }
-    }
-
-    /**
-     * Validate token
-     */
-    public Boolean validateToken(String token, String username) {
-        final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
     }
 
     /**
