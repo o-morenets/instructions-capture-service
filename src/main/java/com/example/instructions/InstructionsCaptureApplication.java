@@ -21,6 +21,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaAdmin;
@@ -37,6 +38,7 @@ import java.util.Map;
 @SpringBootApplication
 @EnableAsync
 @EnableRetry
+@EnableKafka
 public class InstructionsCaptureApplication {
 
     public static final String INBOUND_TOPIC = "instructions.inbound";

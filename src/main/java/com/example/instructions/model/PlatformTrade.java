@@ -20,6 +20,7 @@ public record PlatformTrade(
 ) {
     @Builder
     public record TradeDetails(
+
             @JsonProperty("account")
             String account,
 

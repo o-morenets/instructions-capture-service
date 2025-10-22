@@ -291,7 +291,7 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 # Optional
 SPRING_PROFILES_ACTIVE=docker
 LOG_LEVEL=INFO
-KAFKA_CONSUMER_GROUP=capture-service
+KAFKA_CONSUMER_GROUP=capture-service  # Default: 'capture-service' (local), 'capture-service-docker' (docker)
 ```
 
 ## 📊 Monitoring

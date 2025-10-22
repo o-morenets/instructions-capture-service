@@ -35,8 +35,9 @@ public class KafkaListenerService {
 
         // Handle deserialization errors
         if (canonicalTrade == null) {
-            log.error("Received null trade instruction due to deserialization error - Topic: {}, Partition: {}, Offset: {}", 
-                     topic, partition, offset);
+            log.error("Received null trade instruction due to deserialization error - Topic: {}, Partition: {}, Offset: {}",
+                    topic, partition, offset);
+
             // Message will be auto-committed and skipped
             return;
         }
@@ -48,13 +49,11 @@ public class KafkaListenerService {
             canonicalTrade.setSource("KAFKA");
             tradeService.processTradeInstruction(canonicalTrade);
 
-            log.info("Successfully processed trade instruction from Kafka - Trade ID: {}",
-                    canonicalTrade.getTradeId());
-
+            log.info("Successfully processed trade instruction from Kafka - Trade ID: {}", canonicalTrade.getTradeId());
         } catch (Exception e) {
             log.error("Error processing trade instruction from Kafka - Trade ID: {}, Error: {}",
                     canonicalTrade.getTradeId(), e.getMessage(), e);
-            
+
             // Store failed to trade for manual review
             try {
                 canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
@@ -64,7 +63,7 @@ public class KafkaListenerService {
                 log.error("Failed to store failed trade - Trade ID: {}, Error: {}",
                         canonicalTrade.getTradeId(), storageException.getMessage());
             }
-            
+
             // Don't throw - let a message be auto-committed and continue
         }
     }

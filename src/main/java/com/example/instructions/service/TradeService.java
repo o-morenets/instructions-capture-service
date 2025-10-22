@@ -53,7 +53,6 @@ public class TradeService {
 
             // Publish to Kafka asynchronously
             publishTradeToKafka(storedTrade);
-
         } catch (Exception e) {
             log.error("Error processing trade instruction {}: {}", canonicalTrade.getTradeId(), e.getMessage(), e);
             canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
@@ -264,11 +263,11 @@ public class TradeService {
                                 log.debug("Successfully published trade {} to Kafka", storedTrade.getTradeId());
                                 storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
                                 updateTrade(storedTrade);
+
                                 return storedTrade;
                             })
                             .onErrorResume(error -> {
-                                log.error("Failed to publish trade {}: {}",
-                                        storedTrade.getTradeId(), error.getMessage());
+                                log.error("Failed to publish trade {}: {}", storedTrade.getTradeId(), error.getMessage());
                                 storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                                 updateTrade(storedTrade);
 
