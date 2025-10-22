@@ -183,8 +183,8 @@ public class TradeService {
         try {
             String[] fields = line.split(",");
             if (fields.length != 7) {
-                log.warn("Skipping invalid CSV line (expected 7 fields, got {}): {}",
-                        fields.length, line);
+                log.warn("Skipping invalid CSV line (expected 7 fields, got {}): {}", fields.length, line);
+
                 return null;
             }
 
@@ -199,8 +199,8 @@ public class TradeService {
                     .status(CanonicalTrade.TradeStatus.RECEIVED)
                     .build();
         } catch (Exception e) {
-            log.warn("Skipping invalid CSV line due to parsing error: {} - Error: {}",
-                    line, e.getMessage());
+            log.warn("Skipping invalid CSV line due to parsing error: {} - Error: {}", line, e.getMessage());
+
             return null;
         }
     }
