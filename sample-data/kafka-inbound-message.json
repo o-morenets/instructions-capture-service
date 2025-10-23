@@ -5,7 +5,5 @@
   "tradeType": "BUY",
   "amount": 150000.00,
   "timestamp": "2025-10-15T12:00:00Z",
-  "platformId": "PLATFORM_A",
-  "source": "EXTERNAL_SYSTEM",
-  "status": "RECEIVED"
+  "platformId": "PLATFORM_A"
 }

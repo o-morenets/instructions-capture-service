@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -48,11 +49,20 @@ public class TradeService {
         log.info("Processing trade instruction: {}", canonicalTrade.getTradeId());
 
         try {
+
+            // simulate errors here
+            if (ThreadLocalRandom.current().nextInt(0, 100) < 10) {
+                throw new RuntimeException("Simulated error publishing trade");
+            }
+
+
             // Use common processing logic
             CanonicalTrade storedTrade = validateAndStoreTrade(canonicalTrade);
 
             // Publish to Kafka asynchronously
             publishTradeToKafka(storedTrade);
+
+            log.info("Successfully processed trade instruction from Kafka - Trade ID: {}", canonicalTrade.getTradeId());
         } catch (Exception e) {
             log.error("Error processing trade instruction {}: {}", canonicalTrade.getTradeId(), e.getMessage(), e);
             canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
@@ -257,8 +267,8 @@ public class TradeService {
                     storedTrade.setStatus(CanonicalTrade.TradeStatus.TRANSFORMED);
                     updateTrade(storedTrade);
 
-                    // Publish to Kafka asynchronously - don't fail the whole operation if Kafka fails
-                    return Mono.fromFuture(kafkaPublisher.publishTrade(platformTrade))
+                    // Publish to Kafka asynchronously - wrap in defer to catch synchronous exceptions
+                    return Mono.defer(() -> Mono.fromFuture(kafkaPublisher.publishTrade(platformTrade)))
                             .map(result -> {
                                 log.debug("Successfully published trade {} to Kafka", storedTrade.getTradeId());
                                 storedTrade.setStatus(CanonicalTrade.TradeStatus.PUBLISHED);
@@ -278,8 +288,7 @@ public class TradeService {
                 .onErrorResume(error -> {
 
                     // Handle errors during validation/transformation
-                    log.error("Error processing trade {}: {}",
-                            trade.getTradeId(), error.getMessage(), error);
+                    log.error("Error processing trade {}: {}", trade.getTradeId(), error.getMessage(), error);
                     trade.setStatus(CanonicalTrade.TradeStatus.FAILED);
 
                     // Return empty to skip this trade but continue processing others

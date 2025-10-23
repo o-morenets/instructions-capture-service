@@ -33,8 +33,7 @@ public class TradeTransformer {
      * Applies masking and normalization rules
      */
     public PlatformTrade transformToPlatformTrade(CanonicalTrade canonicalTrade) {
-        log.debug("Transforming canonical trade to platform format for trade: {}",
-                canonicalTrade.getTradeId());
+        log.debug("Transforming canonical trade to platform format for trade: {}", canonicalTrade.getTradeId());
 
         try {
             String maskedAccount = maskAccountNumber(canonicalTrade.getAccountNumber());
@@ -58,11 +57,8 @@ public class TradeTransformer {
                     canonicalTrade.getTradeId());
 
             return platformTrade;
-
         } catch (Exception e) {
-            log.error("Error transforming trade {} to platform format: {}",
-                    canonicalTrade.getTradeId(), e.getMessage());
-
+            log.error("Error transforming trade {} to platform format: {}", canonicalTrade.getTradeId(), e.getMessage());
             throw new IllegalArgumentException("Failed to transform trade: " + e.getMessage(), e);
         }
     }

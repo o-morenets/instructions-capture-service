@@ -10,6 +10,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.example.instructions.InstructionsCaptureApplication.OUTBOUND_TOPIC;
 
@@ -26,18 +27,20 @@ public class KafkaPublisher {
 
     /**
      * Publish platform trade to outbound Kafka topic
-     * Uses asynchronous publishing with a retry mechanism
+     * Uses asynchronous publishing
      */
-    @Retryable(
-            retryFor = {Exception.class},
-            backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
     public CompletableFuture<SendResult<String, PlatformTrade>> publishTrade(PlatformTrade platformTrade) {
         String key = platformTrade.platformId();
 
         log.info("Publishing trade to Kafka topic: {} with key: {}", OUTBOUND_TOPIC, key);
 
         try {
+
+            // simulate errors here
+            if (ThreadLocalRandom.current().nextInt(0, 100) < 10) {
+                throw new RuntimeException("Simulated error publishing trade");
+            }
+
             CompletableFuture<SendResult<String, PlatformTrade>> future =
                     kafkaTemplate.send(OUTBOUND_TOPIC, key, platformTrade);
 
@@ -53,8 +56,7 @@ public class KafkaPublisher {
 
             return future;
         } catch (Exception e) {
-            log.error("Error publishing trade with key: {} to topic: {}. Error: {}",
-                    key, OUTBOUND_TOPIC, e.getMessage());
+            log.error("Error publishing trade with key: {} to topic: {}. Error: {}", key, OUTBOUND_TOPIC, e.getMessage());
             throw e;
         }
     }

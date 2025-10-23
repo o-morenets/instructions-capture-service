@@ -48,21 +48,14 @@ public class KafkaListenerService {
         try {
             canonicalTrade.setSource("KAFKA");
             tradeService.processTradeInstruction(canonicalTrade);
-
-            log.info("Successfully processed trade instruction from Kafka - Trade ID: {}", canonicalTrade.getTradeId());
         } catch (Exception e) {
             log.error("Error processing trade instruction from Kafka - Trade ID: {}, Error: {}",
                     canonicalTrade.getTradeId(), e.getMessage(), e);
 
-            // Store failed to trade for manual review
-            try {
-                canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
-                tradeService.storeTrade(canonicalTrade);
-                log.info("Failed trade stored for manual review - Trade ID: {}", canonicalTrade.getTradeId());
-            } catch (Exception storageException) {
-                log.error("Failed to store failed trade - Trade ID: {}, Error: {}",
-                        canonicalTrade.getTradeId(), storageException.getMessage());
-            }
+            // Store failed to trade storage for manual review
+            canonicalTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
+            tradeService.storeTrade(canonicalTrade);
+            log.info("Failed trade stored for manual review - Trade ID: {}", canonicalTrade.getTradeId());
 
             // Don't throw - let a message be auto-committed and continue
         }

@@ -2,6 +2,7 @@ package com.example.instructions.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import java.util.Date;
  * Utility test class for generating JWT tokens for testing
  * Run this test to generate a valid JWT token for testing the API
  */
+@Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @TestPropertySource(properties = {
         "jwt.secret=${JWT_SECRET}"
@@ -58,6 +60,21 @@ class JwtTokenGeneratorTest {
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(key)
                 .compact();
+    }
+
+    @Test
+    void testException() {
+        try {
+            throwSomeException();
+        } catch (Exception e) {
+            log.error("Exception caught: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    private void throwSomeException() {
+//        throw new Exception("Test Exception");
+        throw new RuntimeException("Test Exception");
     }
 }
 

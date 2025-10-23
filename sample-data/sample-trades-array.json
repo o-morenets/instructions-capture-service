@@ -1,29 +1,29 @@
 [
   {
-    "tradeId": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+    "tradeId": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b0000",
     "accountNumber": "123456789",
     "securityId": "ABC123",
     "tradeType": "BUY",
     "amount": 100000,
     "timestamp": "2025-08-04T21:15:33Z",
-    "platformId": "ACCT123"
+    "platformId": "ACCT999"
   },
   {
-    "tradeId": "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e",
+    "tradeId": "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c1111",
     "accountNumber": "987654321",
     "securityId": "XYZ789",
     "tradeType": "SELL",
     "amount": 50000,
     "timestamp": "2025-08-04T21:16:33Z",
-    "platformId": "ACCT456"
+    "platformId": "ACCT555"
   },
   {
-    "tradeId": "c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f",
+    "tradeId": "c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d2222",
     "accountNumber": "555666777",
     "securityId": "DEF456",
     "tradeType": "PURCHASE",
     "amount": 75000,
     "timestamp": "2025-08-04T21:17:33Z",
-    "platformId": "ACCT789"
+    "platformId": "ACCT333"
   }
 ]

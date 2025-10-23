@@ -80,19 +80,21 @@ public class TradeController {
     /**
      * Get all trades with an optional status filter
      */
-    @GetMapping(produces = "application/x-ndjson")
+    @GetMapping
     @Operation(
             summary = "Get all trades with optional status filter",
             description = "Retrieve all trades, optionally filtered by status"
     )
     @ApiResponse(responseCode = "200", description = "Trades retrieved successfully")
-    public ResponseEntity<Flux<CanonicalTrade>> getAllTrades(
+    public ResponseEntity<List<CanonicalTrade>> getAllTrades(
             @Parameter(description = "Filter by trade status (optional)")
             @RequestParam(value = "status", required = false) CanonicalTrade.TradeStatus status) {
 
         log.debug("Getting all trades with status filter: {}", status);
 
-        Flux<CanonicalTrade> trades = tradeService.getAllTrades(status);
+        List<CanonicalTrade> trades = tradeService.getAllTrades(status).collectList().block();
+
+        log.debug("Retrieved {} trades", trades.size());
 
         return ResponseEntity.ok(trades);
     }
