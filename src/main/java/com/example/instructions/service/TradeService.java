@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
@@ -343,5 +344,72 @@ public class TradeService {
         stats.put("statusCounts", statusCounts);
 
         return stats;
+    }
+
+    /**
+     * Scheduled job to automatically retry failed trades every 5 seconds
+     */
+    @Scheduled(fixedDelay = 5000, initialDelay = 10000)
+    public void scheduledRetryFailedTrades() {
+        retryFailedTrades()
+                .subscribe(
+                        result -> {
+                            int retriedCount = (int) result.get("retriedCount");
+                            if (retriedCount > 0) {
+                                log.info("Scheduled retry: {}", result);
+                            }
+                        },
+                        error -> log.error("Error in scheduled retry: {}", error.getMessage())
+                );
+    }
+
+    /**
+     * Retry failed trades from storage
+     */
+    public Mono<Map<String, Object>> retryFailedTrades() {
+        List<CanonicalTrade> failedTrades = tradeStorage.values().stream()
+                .filter(trade -> trade.getStatus() == CanonicalTrade.TradeStatus.FAILED)
+                .collect(Collectors.toList());
+
+        if (failedTrades.isEmpty()) {
+            log.info("No failed trades to retry");
+            return Mono.just(Map.of(
+                    "retriedCount", 0,
+                    "successCount", 0,
+                    "failedCount", 0
+            ));
+        }
+
+        log.info("Retrying {} failed trades", failedTrades.size());
+
+        return Flux.fromIterable(failedTrades)
+                .flatMap(trade -> {
+                    // Reset status to retry
+                    trade.setStatus(CanonicalTrade.TradeStatus.RECEIVED);
+                    updateTrade(trade);
+
+                    // Retry processing
+                    return processTradeReactive(trade)
+                            .map(processedTrade -> Map.of("tradeId", processedTrade.getTradeId(), "success", true))
+                            .onErrorResume(error -> {
+                                log.error("Failed to retry trade {}: {}", trade.getTradeId(), error.getMessage());
+                                return Mono.just(Map.of("tradeId", trade.getTradeId(), "success", false));
+                            });
+                }, 4) // Process 4 failed trades in parallel
+                .collectList()
+                .map(results -> {
+                    long successCount = results.stream().filter(r -> (Boolean) r.get("success")).count();
+                    long failedCount = results.size() - successCount;
+
+                    Map<String, Object> summary = new HashMap<>();
+                    summary.put("retriedCount", results.size());
+                    summary.put("successCount", successCount);
+                    summary.put("failedCount", failedCount);
+
+                    log.info("Retry completed - Total: {}, Success: {}, Failed: {}",
+                            results.size(), successCount, failedCount);
+
+                    return summary;
+                });
     }
 }

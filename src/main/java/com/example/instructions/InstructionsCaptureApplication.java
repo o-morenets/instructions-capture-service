@@ -30,6 +30,7 @@ import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import java.util.Map;
 @EnableAsync
 @EnableRetry
 @EnableKafka
+@EnableScheduling
 public class InstructionsCaptureApplication {
 
     public static final String INBOUND_TOPIC = "instructions.inbound";

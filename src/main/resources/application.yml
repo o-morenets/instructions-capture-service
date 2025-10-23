@@ -34,6 +34,11 @@ spring:
         spring.json.type.mapping: "canonicalTrade:com.example.instructions.model.CanonicalTrade"
         spring.json.use.type.headers: false
         spring.json.value.default.type: "com.example.instructions.model.CanonicalTrade"
+        connections.max.idle.ms: 600000  # 10 minutes
+        reconnect.backoff.ms: 1000
+        reconnect.backoff.max.ms: 10000
+        session.timeout.ms: 30000
+        heartbeat.interval.ms: 3000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -41,6 +46,12 @@ spring:
       batch-size: 16384
       linger-ms: 1
       buffer-memory: 33554432
+      properties:
+        connections.max.idle.ms: 600000  # 10 minutes (default is 9 minutes)
+        reconnect.backoff.ms: 1000
+        reconnect.backoff.max.ms: 10000
+        request.timeout.ms: 30000
+        delivery.timeout.ms: 120000
 
   task:
     execution:

@@ -28,6 +28,11 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_NUM_PARTITIONS: 3
       
+      # Connection settings
+      KAFKA_CONNECTIONS_MAX_IDLE_MS: 600000  # 10 minutes
+      KAFKA_MAX_CONNECTIONS_PER_IP: 1000
+      KAFKA_MAX_CONNECTIONS: 2000
+      
       # JMX for monitoring
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: localhost
