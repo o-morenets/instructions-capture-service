@@ -53,8 +53,7 @@ public class TradeTransformer {
                     .trade(tradeDetails)
                     .build();
 
-            log.debug("Successfully transformed trade {} to platform format",
-                    canonicalTrade.getTradeId());
+            log.debug("Successfully transformed trade {} to platform format", canonicalTrade.getTradeId());
 
             return platformTrade;
         } catch (Exception e) {

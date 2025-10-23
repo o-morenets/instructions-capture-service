@@ -278,6 +278,7 @@ public class TradeService {
                             })
                             .onErrorResume(error -> {
                                 log.error("Failed to publish trade {}: {}", storedTrade.getTradeId(), error.getMessage());
+
                                 storedTrade.setStatus(CanonicalTrade.TradeStatus.FAILED);
                                 updateTrade(storedTrade);
 
