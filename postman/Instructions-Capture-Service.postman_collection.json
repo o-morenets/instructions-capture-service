@@ -152,34 +152,6 @@
         "description": "Clear all trades from in-memory storage (for testing)"
       },
       "response": []
-    },
-    {
-      "name": "Actuator Health",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/actuator/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["actuator", "health"]
-        },
-        "description": "Spring Boot Actuator health endpoint"
-      },
-      "response": []
-    },
-    {
-      "name": "Actuator Info",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/actuator/info",
-          "host": ["{{baseUrl}}"],
-          "path": ["actuator", "info"]
-        },
-        "description": "Application information endpoint"
-      },
-      "response": []
     }
   ]
 }

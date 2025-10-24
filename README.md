@@ -1,22 +1,43 @@
 # Instructions Capture Service
 
-A Spring Boot microservice that processes trade instructions via file upload and Kafka messaging. The service converts inputs to a canonical format, applies transformations to sensitive fields, and publishes platform-specific JSON to Kafka topics.
+A fully reactive Spring Boot microservice built with **Spring WebFlux** that processes trade instructions via file upload and Kafka messaging. The service converts inputs to a canonical format, applies transformations to sensitive fields, and publishes platform-specific JSON to Kafka topics.
 
 ## 🚀 Features
 
-- **Reactive Streaming**: Built with Project Reactor Flux for non-blocking I/O and backpressure
+- **Fully Reactive Stack**: Built with Spring WebFlux and Project Reactor for end-to-end non-blocking I/O
 - **Multi-source Input**: Accept trade instructions via REST API file upload or Kafka messages
-- **Format Support**: Process CSV and JSON file formats
+- **Format Support**: Process CSV and JSON file formats reactively
 - **Data Transformation**: Normalize and mask sensitive data (account numbers, security IDs)
 - **In-Memory Storage**: Fast processing with ConcurrentHashMap-based storage
 - **Kafka Integration**: Consume from `instructions.inbound` and publish to `instructions.outbound`
-- **JWT Security**: JWT Bearer token authentication for REST API endpoints
+- **JWT Security**: JWT Bearer token authentication for REST API endpoints (reactive security)
 - **Security**: Input validation, data masking, sanitization, and authentication
 - **Performance**: Asynchronous processing with controlled concurrency and backpressure
-- **Memory Efficient**: Stream-based processing for large files (10MB+)
-- **Monitoring**: Health checks, metrics, and comprehensive logging
-- **Documentation**: OpenAPI/Swagger documentation with JWT support
-- **Testing**: Unit, integration, and contract tests
+- **Memory Efficient**: Reactive stream-based processing for large files (10MB+)
+- **Monitoring**: Health checks and comprehensive logging
+- **Documentation**: OpenAPI/Swagger documentation with JWT support (WebFlux UI)
+- **Testing**: Unit tests with WebTestClient for reactive endpoints
+
+## 🛠️ Technology Stack
+
+> **Note**: This project has been fully migrated to a reactive stack using Spring WebFlux. All MVC components, AspectJ dependencies, and Spring Boot Actuator have been removed for a cleaner, fully reactive architecture.
+
+- **Spring Boot 3.5.6** - Application framework
+- **Spring WebFlux** - Reactive web framework (fully non-blocking)
+- **Project Reactor** - Reactive streams implementation (Mono/Flux)
+- **Spring Security (Reactive)** - JWT authentication with ServerHttpSecurity and WebFilter
+- **Spring Kafka** - Kafka integration
+- **Jackson** - JSON serialization with JavaTimeModule
+- **Lombok** - Boilerplate reduction
+- **SpringDoc OpenAPI 2.7.0** - API documentation (WebFlux UI)
+- **JUnit 5 + Mockito** - Testing framework
+- **WebTestClient** - Reactive endpoint testing
+
+### What's NOT Included
+- ❌ Spring MVC (replaced with WebFlux)
+- ❌ Spring Boot Actuator (removed for demo simplicity)
+- ❌ AspectJ (removed - no @Scheduled, @Retriable)
+- ❌ Servlet API (fully reactive with Netty)
 
 ## 🏗️ Architecture
 
@@ -53,6 +74,8 @@ A Spring Boot microservice that processes trade instructions via file upload and
 - Java 21+
 - Maven 3.6+
 - Apache Kafka 3.3+
+- Spring Boot 3.5.6+
+- Spring WebFlux (included)
 - Project Reactor Core (included)
 - Docker (optional)
 
@@ -106,8 +129,8 @@ cd instructions-capture-service
 # Health check
 curl http://localhost:8080/api/v1/trades/health
 
-# Swagger UI
-open http://localhost:8080/swagger-ui.html
+# Swagger UI (WebFlux)
+open http://localhost:8080/webjars/swagger-ui/index.html
 ```
 
 ## 📡 API Endpoints
@@ -127,18 +150,20 @@ curl -X POST "http://localhost:8080/api/v1/trades/upload" \
      -F "file=@sample-trade.json"
 ```
 
-### Trade Management
+### Trade Management (Reactive Endpoints)
 ```bash
-# Get all trades
+# Stream all trades (Server-Sent Events)
 curl -H "Authorization: Bearer $TOKEN" \
+     -H "Accept: text/event-stream" \
      http://localhost:8080/api/v1/trades
 
 # Get trade by ID
 curl -H "Authorization: Bearer $TOKEN" \
      http://localhost:8080/api/v1/trades/TRADE-123
 
-# Get trades by status
+# Stream trades by status (Server-Sent Events)
 curl -H "Authorization: Bearer $TOKEN" \
+     -H "Accept: text/event-stream" \
      "http://localhost:8080/api/v1/trades?status=RECEIVED"
 
 # Get statistics
@@ -249,8 +274,9 @@ For detailed environment setup, see [ENV_SETUP.md](ENV_SETUP.md).
 
 All endpoints require JWT authentication except:
 - `GET /api/v1/trades/health` - Health check
-- `GET /actuator/**` - Actuator endpoints  
 - `GET /swagger-ui/**` - Swagger UI
+- `GET /swagger-ui.html` - Swagger UI redirect
+- `GET /webjars/**` - Static resources for Swagger UI
 - `GET /v3/api-docs/**` - OpenAPI documentation
 
 ### Integration with Other Services
@@ -298,16 +324,12 @@ KAFKA_CONSUMER_GROUP=capture-service  # Default: 'capture-service' (local), 'cap
 
 ### Health Checks
 - **Application**: `/api/v1/trades/health`
-- **Spring Actuator**: `/actuator/health`
-
-### Metrics
-- **Prometheus**: `/actuator/prometheus`
-- **Custom Metrics**: Trade processing rates, error rates
 
 ### Logging
 - **Structured Logging**: JSON format in production
 - **Log Levels**: Configurable per environment
 - **No Sensitive Data**: Account numbers and other PII are masked
+- **Reactive Logging**: Non-blocking log operations
 
 ## 🔄 Kafka Integration
 
@@ -389,10 +411,12 @@ docker compose up kafka -d
 - **Memory Usage**: ~80MB for 176K trades (10MB file)
 
 ### Optimization Features
-- **Reactive Streaming**: Project Reactor Flux for non-blocking I/O
+- **Fully Reactive**: Spring WebFlux with Project Reactor for end-to-end non-blocking I/O
+- **Reactive File Upload**: FilePart with DataBufferUtils for efficient streaming
 - **Backpressure**: Automatic flow control prevents memory overflow
-- **Controlled Concurrency**: Process up to 8 trades in parallel
+- **Controlled Concurrency**: Process up to 8 trades in parallel with flatMap
 - **Stream Processing**: Memory-efficient file parsing (handles 10MB+ files)
+- **Reactive Security**: Non-blocking JWT authentication with WebFilter
 - **Connection Pooling**: Optimized Kafka connections
 - **Caching**: In-memory trade storage with ConcurrentHashMap
 
@@ -443,9 +467,10 @@ docker exec -it instructions-capture-service-kafka-1 kafka-cluster --bootstrap-s
 - Ensure proper CSV headers
 
 **Memory Issues**
-- Monitor with `/actuator/metrics`
+- Monitor with `/api/v1/trades/statistics`
 - Consider clearing old trades: `DELETE /api/v1/trades/clear`
 - Adjust JVM heap size: `-Xmx2g`
+- Check logs for backpressure signals
 
 ### Support
 - 📧 Email: oleksii.morenets@gmail.com
