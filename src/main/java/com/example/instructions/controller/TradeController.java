@@ -10,17 +10,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * REST Controller for trade instruction processing
@@ -38,14 +37,13 @@ public class TradeController {
 
     /**
      * Upload and process trade instructions file using reactive streaming (Flux)
-     * Provides better memory management and backpressure for large files
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Upload trade instructions file (Reactive)",
             description = "Upload and process a CSV or JSON file using reactive streaming with Flux. " +
                     "Provides better memory management and backpressure for large files. " +
-                    "CSV format: account_number,security_id,trade_type,amount,timestamp,platform_id. " +
+                    "CSV format: tradeId,account_number,security_id,trade_type,amount,timestamp,platform_id. " +
                     "JSON format: Single trade object or array of trade objects."
     )
     @ApiResponses({
@@ -54,49 +52,49 @@ public class TradeController {
             @ApiResponse(responseCode = "413", description = "File too large"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<Map<String, Object>> uploadTradeFile(
+    public Mono<Map<String, Object>> uploadTradeFile(
             @Parameter(description = "Trade instructions file (CSV or JSON)")
-            @RequestParam("file") @NotNull MultipartFile file) {
+            @RequestPart("file") @NotNull Mono<FilePart> filePartMono
+    ) {
+        return filePartMono.flatMap(filePart -> {
+            log.info("Received reactive file upload request: {}", filePart.filename());
 
-        log.info("Received reactive file upload request: {} (size: {} bytes)",
-                file.getOriginalFilename(), file.getSize());
+            return tradeService.processFileUploadReactive(filePart)
+                    .collectList()
+                    .map(tradeIds -> {
+                        Map<String, Object> response = Map.of(
+                                "success", true,
+                                "message", "File processed successfully",
+                                "filename", filePart.filename(),
+                                "tradesProcessed", tradeIds.size()
+                        );
 
-        List<String> tradeIds = tradeService.processFileUploadReactive(file).block();
+                        log.info("Successfully processed file upload: {} with {} trades",
+                                filePart.filename(), tradeIds.size());
 
-        int tradeCount = tradeIds != null ? tradeIds.size() : 0;
-        String filename = file.getOriginalFilename();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "File processed successfully");
-        response.put("filename", filename);
-        response.put("tradesProcessed", tradeCount);
-
-        log.info("Successfully processed file upload: {} with {} trades", filename, tradeCount);
-
-        return ResponseEntity.ok(response);
+                        return response;
+                    });
+        });
     }
 
     /**
-     * Get all trades with an optional status filter
+     * Get all trades with an optional status filter (fully reactive with WebFlux)
+     * Streams trades as Server-Sent Events
      */
-    @GetMapping
+    @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(
-            summary = "Get all trades with optional status filter",
-            description = "Retrieve all trades, optionally filtered by status"
+            summary = "Stream all trades with optional status filter",
+            description = "Retrieve all trades as Server-Sent Events stream (fully reactive)"
     )
-    @ApiResponse(responseCode = "200", description = "Trades retrieved successfully")
-    public ResponseEntity<List<CanonicalTrade>> getAllTrades(
+    @ApiResponse(responseCode = "200", description = "Trades streaming successfully")
+    public Flux<CanonicalTrade> getAllTrades(
             @Parameter(description = "Filter by trade status (optional)")
             @RequestParam(value = "status", required = false) CanonicalTrade.TradeStatus status) {
 
-        log.debug("Getting all trades with status filter: {}", status);
+        log.info("Getting all trades with status filter: {}", status);
 
-        List<CanonicalTrade> trades = tradeService.getAllTrades(status).collectList().block();
-
-        log.debug("Retrieved {} trades", trades.size());
-
-        return ResponseEntity.ok(trades);
+        return tradeService.getAllTrades(status)
+                .doOnComplete(() -> log.info("Completed streaming {} trades", status));
     }
 
     /**
@@ -108,15 +106,14 @@ public class TradeController {
             @ApiResponse(responseCode = "200", description = "Trade found"),
             @ApiResponse(responseCode = "404", description = "Trade not found")
     })
-    public ResponseEntity<CanonicalTrade> getTradeById(
+    public Mono<CanonicalTrade> getTradeById(
             @Parameter(description = "Trade ID")
             @PathVariable String tradeId) {
 
         log.debug("Getting trade by ID: {}", tradeId);
 
-        Optional<CanonicalTrade> trade = tradeService.getTradeById(tradeId);
-
-        return trade.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return Mono.justOrEmpty(tradeService.getTradeById(tradeId))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Trade not found")));
     }
 
     /**
@@ -128,16 +125,14 @@ public class TradeController {
             description = "Clear all trades from in-memory storage (for testing purposes)"
     )
     @ApiResponse(responseCode = "200", description = "All trades cleared successfully")
-    public ResponseEntity<Map<String, Object>> clearAllTrades() {
+    public Mono<Map<String, Object>> clearAllTrades() {
         log.info("Clearing all trades from memory");
 
-        tradeService.clearAllTrades();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "All trades cleared from memory");
-
-        return ResponseEntity.ok(response);
+        return Mono.fromRunnable(tradeService::clearAllTrades)
+                .then(Mono.just(Map.of(
+                        "success", true,
+                        "message", "All trades cleared from memory"
+                )));
     }
 
     /**
@@ -149,12 +144,10 @@ public class TradeController {
             description = "Get statistics about processed trades including counts by status"
     )
     @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully")
-    public ResponseEntity<Map<String, Object>> getTradeStatistics() {
+    public Mono<Map<String, Object>> getTradeStatistics() {
         log.debug("Getting trade statistics");
 
-        Map<String, Object> stats = tradeService.getTradeStatistics();
-
-        return ResponseEntity.ok(stats);
+        return Mono.fromCallable(tradeService::getTradeStatistics);
     }
 
     /**
@@ -163,12 +156,11 @@ public class TradeController {
     @GetMapping("/health")
     @Operation(summary = "Health check", description = "Check if the trade processing service is healthy")
     @ApiResponse(responseCode = "200", description = "Service is healthy")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        Map<String, Object> health = new HashMap<>();
-        health.put("status", "UP");
-        health.put("service", "instructions-capture-service");
-        health.put("timestamp", System.currentTimeMillis());
-
-        return ResponseEntity.ok(health);
+    public Mono<Map<String, Object>> healthCheck() {
+        return Mono.just(Map.of(
+                "status", "UP",
+                "service", "instructions-capture-service",
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 }

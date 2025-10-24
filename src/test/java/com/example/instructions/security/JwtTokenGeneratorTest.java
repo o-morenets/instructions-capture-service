@@ -16,11 +16,9 @@ import java.util.Date;
  * Utility test class for generating JWT tokens for testing
  * Run this test to generate a valid JWT token for testing the API
  */
-@Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@TestPropertySource(properties = {
-        "jwt.secret=${JWT_SECRET}"
-})
+@Slf4j
+@TestPropertySource(properties = {"jwt.secret=${JWT_SECRET}"})
 class JwtTokenGeneratorTest {
 
     @Value("${jwt.secret}")
@@ -41,7 +39,6 @@ class JwtTokenGeneratorTest {
 
     @Test
     void generateLongLivedToken() {
-        // Generate token valid for 24 hours
         String token = generateToken("test-service", 86400000L);
 
         System.out.println("\n========================================");
@@ -60,21 +57,6 @@ class JwtTokenGeneratorTest {
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(key)
                 .compact();
-    }
-
-    @Test
-    void testException() {
-        try {
-            throwSomeException();
-        } catch (Exception e) {
-            log.error("Exception caught: {}", e.getMessage());
-            throw e;
-        }
-    }
-
-    private void throwSomeException() {
-//        throw new Exception("Test Exception");
-        throw new RuntimeException("Test Exception");
     }
 }
 

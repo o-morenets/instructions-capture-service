@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
@@ -16,7 +14,6 @@ import static com.example.instructions.InstructionsCaptureApplication.OUTBOUND_T
 
 /**
  * Service for publishing transformed trades to Kafka
- * Handles asynchronous publishing with retry logic
  */
 @Service
 @Slf4j

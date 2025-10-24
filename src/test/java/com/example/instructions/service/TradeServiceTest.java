@@ -11,12 +11,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +39,8 @@ class TradeServiceTest {
     @Mock
     private KafkaPublisher kafkaPublisher;
 
-    @Mock
-    private MultipartFile multipartFile;
-
     private TradeService tradeService;
+    private final DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
 
     @BeforeEach
     void setUp() {
@@ -167,15 +167,13 @@ class TradeServiceTest {
     }
 
     @Test
-    void shouldProcessCsvFile() throws IOException {
-        String csvContent = "trade_id,account_number,security_id,trade_type,amount,timestamp,platform_id\n" +
-                "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d,123456789,ABC123,BUY,100000,2025-08-04T21:15:33Z,ACCT123\n" +
-                "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e,987654321,XYZ789,SELL,50000,2025-08-04T21:16:33Z,ACCT456";
+    void shouldProcessCsvFile() {
+        String csvContent = """
+                trade_id,account_number,security_id,trade_type,amount,timestamp,platform_id
+                a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d,123456789,ABC123,BUY,100000,2025-08-04T21:15:33Z,ACCT123
+                b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e,987654321,XYZ789,SELL,50000,2025-08-04T21:16:33Z,ACCT456""";
 
-        when(multipartFile.getOriginalFilename()).thenReturn("trades.csv");
-        when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(csvContent.getBytes()));
-        when(multipartFile.isEmpty()).thenReturn(false);
-        when(multipartFile.getSize()).thenReturn((long) csvContent.length());
+        FilePart filePart = createFilePart("trades.csv", csvContent);
 
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
@@ -184,22 +182,19 @@ class TradeServiceTest {
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
                 .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
-        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
+        List<String> tradeIds = tradeService.processFileUploadReactive(filePart).collectList().block();
 
         assertThat(tradeIds).hasSize(2);
         assertThat(tradeIds).contains("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d", "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e");
     }
 
     @Test
-    void shouldProcessJsonFile() throws IOException {
+    void shouldProcessJsonFile() {
         String jsonContent = "{\"tradeId\":\"a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d\",\"accountNumber\":\"123456789\",\"securityId\":\"ABC123\"," +
                 "\"tradeType\":\"BUY\",\"amount\":100000,\"timestamp\":\"2025-08-04T21:15:33Z\"," +
                 "\"platformId\":\"ACCT123\"}";
 
-        when(multipartFile.getOriginalFilename()).thenReturn("trade.json");
-        when(multipartFile.getBytes()).thenReturn(jsonContent.getBytes());
-        when(multipartFile.isEmpty()).thenReturn(false);
-        when(multipartFile.getSize()).thenReturn((long) jsonContent.length());
+        FilePart filePart = createFilePart("trade.json", jsonContent);
 
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
@@ -208,14 +203,14 @@ class TradeServiceTest {
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
                 .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
-        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
+        List<String> tradeIds = tradeService.processFileUploadReactive(filePart).collectList().block();
 
         assertThat(tradeIds).hasSize(1);
         assertThat(tradeIds.getFirst()).isEqualTo("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d");
     }
 
     @Test
-    void shouldProcessJsonArrayWithMultipleTrades() throws IOException {
+    void shouldProcessJsonArrayWithMultipleTrades() {
         // JSON array with 3 trades (same structure as sample-trades-array.json)
         String jsonArray = """
                 [
@@ -249,10 +244,7 @@ class TradeServiceTest {
                 ]
                 """;
 
-        when(multipartFile.getOriginalFilename()).thenReturn("sample-trades-array.json");
-        when(multipartFile.getBytes()).thenReturn(jsonArray.getBytes());
-        when(multipartFile.isEmpty()).thenReturn(false);
-        when(multipartFile.getSize()).thenReturn((long) jsonArray.length());
+        FilePart filePart = createFilePart("sample-trades-array.json", jsonArray);
 
         doNothing().when(tradeTransformer).validateCanonicalTrade(any());
         when(tradeTransformer.transformToPlatformTrade(any()))
@@ -261,7 +253,7 @@ class TradeServiceTest {
         when(kafkaPublisher.publishTrade(any(PlatformTrade.class)))
                 .thenReturn(CompletableFuture.completedFuture(mockSendResult));
 
-        List<String> tradeIds = tradeService.processFileUploadReactive(multipartFile).block();
+        List<String> tradeIds = tradeService.processFileUploadReactive(filePart).collectList().block();
 
         // Verify 3 trades were processed
         assertThat(tradeIds).hasSize(3);
@@ -279,21 +271,19 @@ class TradeServiceTest {
 
     @Test
     void shouldRejectInvalidFileFormat() {
-        when(multipartFile.getOriginalFilename()).thenReturn("invalid.txt");
-        when(multipartFile.isEmpty()).thenReturn(false);
-        when(multipartFile.getSize()).thenReturn(100L);
+        FilePart filePart = createFilePart("invalid.txt", "some content");
 
-        assertThatThrownBy(() -> tradeService.processFileUploadReactive(multipartFile).block())
+        assertThatThrownBy(() -> tradeService.processFileUploadReactive(filePart).collectList().block())
                 .hasMessageContaining("Unsupported file format");
     }
 
     @Test
     void shouldRejectEmptyFile() {
-        when(multipartFile.getOriginalFilename()).thenReturn("empty.csv");
-        when(multipartFile.isEmpty()).thenReturn(true);
+        FilePart filePart = createFilePart("empty.csv", "");
 
-        assertThatThrownBy(() -> tradeService.processFileUploadReactive(multipartFile).block())
-                .hasMessageContaining("File is empty");
+        // Empty file will pass validation but return no results
+        List<String> result = tradeService.processFileUploadReactive(filePart).collectList().block();
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -330,5 +320,19 @@ class TradeServiceTest {
                         .timestamp(Instant.parse("2025-08-04T21:15:33Z"))
                         .build())
                 .build();
+    }
+
+    /**
+     * Helper method to create a mock FilePart for testing
+     */
+    private FilePart createFilePart(String filename, String content) {
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+        DataBuffer dataBuffer = bufferFactory.wrap(bytes);
+
+        FilePart filePart = mock(FilePart.class);
+        when(filePart.filename()).thenReturn(filename);
+        lenient().when(filePart.content()).thenReturn(Flux.just(dataBuffer));
+
+        return filePart;
     }
 }

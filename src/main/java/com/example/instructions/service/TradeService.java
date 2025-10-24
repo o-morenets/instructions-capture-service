@@ -6,20 +6,23 @@ import com.example.instructions.util.TradeTransformer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -55,7 +58,6 @@ public class TradeService {
             if (ThreadLocalRandom.current().nextInt(0, 100) < 10) {
                 throw new RuntimeException("Simulated error publishing trade");
             }
-
 
             // Use common processing logic
             CanonicalTrade storedTrade = validateAndStoreTrade(canonicalTrade);
@@ -112,81 +114,61 @@ public class TradeService {
     }
 
     /**
-     * Process file upload using reactive Flux streaming
+     * Process file upload using reactive Flux streaming with FilePart
      */
-    public Mono<List<String>> processFileUploadReactive(MultipartFile file) {
-        log.info("Processing file upload reactively: {} (size: {} bytes)", file.getOriginalFilename(), file.getSize());
+    public Flux<String> processFileUploadReactive(FilePart filePart) {
+        String filename = filePart.filename();
+        log.info("Processing file upload reactively: {}", filename);
 
-        return Mono.defer(() -> {
+        if (filename.isEmpty()) {
+            return Flux.error(new IllegalArgumentException("File name cannot be null or empty"));
+        }
 
-            // Validate file
-            if (file.isEmpty() || file.getSize() == 0) {
-                return Mono.error(new IllegalArgumentException("File is empty"));
-            }
+        // Determine a file type and create the appropriate Flux
+        Flux<CanonicalTrade> tradeFlux;
 
-            String filename = file.getOriginalFilename();
-            if (filename == null) {
-                return Mono.error(new IllegalArgumentException("File name cannot be null"));
-            }
+        if (filename.toLowerCase().endsWith(".csv")) {
+            tradeFlux = processCsvFileReactive(filePart);
+        } else if (filename.toLowerCase().endsWith(".json")) {
+            tradeFlux = processJsonFileReactive(filePart);
+        } else {
+            return Flux.error(new IllegalArgumentException(
+                    "Unsupported file format. Only CSV and JSON files are accepted."));
+        }
 
-            // Determine a file type and create the appropriate Flux
-            Flux<CanonicalTrade> tradeFlux;
-
-            if (filename.toLowerCase().endsWith(".csv")) {
-                tradeFlux = processCsvFileReactive(file);
-            } else if (filename.toLowerCase().endsWith(".json")) {
-                tradeFlux = processJsonFileReactive(file);
-            } else {
-                return Mono.error(new IllegalArgumentException(
-                        "Unsupported file format. Only CSV and JSON files are accepted."));
-            }
-
-            // Process trades with controlled parallelism and backpressure
-            return tradeFlux
-                    .doOnNext(trade -> trade.setSource("FILE_UPLOAD"))
-                    .flatMap(trade -> processTradeReactive(trade)
-                                    .onErrorResume(error -> {
-                                        log.error("Error processing trade {}: {}", trade.getTradeId(), error.getMessage());
-
-                                        return Mono.empty(); // Skip failed trades
-                                    }),
-                            8) // Concurrency level - process 8 trades in parallel
-                    .map(CanonicalTrade::getTradeId)
-                    .collectList()
-                    .doOnError(error ->
-                            log.error("Error processing file upload: {}", error.getMessage(), error))
-                    .doOnSuccess(tradeIds ->
-                            log.info("Successfully processed {} trades from file: {}", tradeIds.size(), filename));
-        });
+        // Process trades with controlled parallelism and backpressure
+        return tradeFlux
+                .doOnNext(trade -> trade.setSource("FILE_UPLOAD"))
+                .flatMap(trade -> processTradeReactive(trade)
+                                .onErrorResume(error -> {
+                                    log.error("Error processing trade {}: {}", trade.getTradeId(), error.getMessage());
+                                    return Mono.empty(); // Skip failed trades
+                                }),
+                        8) // Concurrency level - process 8 trades in parallel
+                .map(CanonicalTrade::getTradeId)
+                .doOnError(error ->
+                        log.error("Error processing file upload: {}", error.getMessage(), error))
+                .doOnComplete(() ->
+                        log.info("Completed processing file: {}", filename));
     }
 
-    private Flux<CanonicalTrade> processCsvFileReactive(MultipartFile file) {
-        return Flux.using(
-
-                // Resource factory - open the file
-                () -> {
-                    try {
-                        return new BufferedReader(new InputStreamReader(file.getInputStream()));
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to open CSV file", e);
-                    }
-                },
-
-                // Stream factory - create Flux from lines
-                reader -> Flux.fromStream(reader.lines())
-                        .skip(1) // Skip header
-                        .flatMap(line -> Mono.justOrEmpty(parseCsvLine(line)))
-                        .subscribeOn(Schedulers.boundedElastic()), // Use IO thread pool
-
-                // Resource cleanup
-                reader -> {
-                    try {
-                        reader.close();
-                    } catch (IOException e) {
-                        log.error("Error closing CSV reader: {}", e.getMessage());
-                    }
-                }
-        );
+    private Flux<CanonicalTrade> processCsvFileReactive(FilePart filePart) {
+        return DataBufferUtils.join(filePart.content())
+                .map(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    DataBufferUtils.release(dataBuffer);
+                    return new String(bytes, StandardCharsets.UTF_8);
+                })
+                .flatMapMany(content -> {
+                    String[] lines = content.split("\n");
+                    return Flux.fromArray(lines)
+                            .skip(1) // Skip header
+                            .map(String::trim)
+                            .filter(line -> !line.isEmpty())
+                            .flatMap(line -> Mono.justOrEmpty(parseCsvLine(line)));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private CanonicalTrade parseCsvLine(String line) {
@@ -215,12 +197,17 @@ public class TradeService {
         }
     }
 
-    private Flux<CanonicalTrade> processJsonFileReactive(MultipartFile file) {
-        return Mono.fromCallable(() -> {
+    private Flux<CanonicalTrade> processJsonFileReactive(FilePart filePart) {
+        return DataBufferUtils.join(filePart.content())
+                .map(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    DataBufferUtils.release(dataBuffer);
+                    return bytes;
+                })
+                .flatMapMany(bytes -> {
                     try {
-                        byte[] bytes = file.getBytes();
-                        String content = new String(bytes).trim();
-
+                        String content = new String(bytes, StandardCharsets.UTF_8).trim();
                         log.debug("Parsing JSON content (length: {})", content.length());
 
                         // Check if it's an array or single object
@@ -229,24 +216,21 @@ public class TradeService {
                             // Parse as an array
                             CanonicalTrade[] trades = objectMapper.readValue(content, CanonicalTrade[].class);
                             log.debug("Parsed {} trades from JSON array", trades.length);
-
-                            return Arrays.asList(trades);
+                            return Flux.fromArray(trades);
                         } else if (content.startsWith("{")) {
 
                             // Parse as a single object
                             CanonicalTrade trade = objectMapper.readValue(content, CanonicalTrade.class);
                             log.debug("Parsed 1 trade from JSON object");
-
-                            return List.of(trade);
+                            return Flux.just(trade);
                         } else {
-                            throw new IllegalArgumentException("Invalid JSON format");
+                            return Flux.error(new IllegalArgumentException("Invalid JSON format"));
                         }
                     } catch (IOException e) {
                         log.error("Failed to parse JSON", e);
-                        throw new RuntimeException("Failed to parse JSON file", e);
+                        return Flux.error(new RuntimeException("Failed to parse JSON file", e));
                     }
                 })
-                .flatMapMany(Flux::fromIterable)
                 .map(this::processJsonTrade)
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -255,6 +239,7 @@ public class TradeService {
         if (trade.getStatus() == null) {
             trade.setStatus(CanonicalTrade.TradeStatus.RECEIVED);
         }
+
         return trade;
     }
 
