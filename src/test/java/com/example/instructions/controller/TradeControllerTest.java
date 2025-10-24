@@ -98,7 +98,7 @@ class TradeControllerTest {
                 .uri("/api/v1/trades")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+                .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_NDJSON)
                 .expectBodyList(CanonicalTrade.class)
                 .contains(sampleTrade);
     }
@@ -112,7 +112,7 @@ class TradeControllerTest {
                 .uri("/api/v1/trades?status=RECEIVED")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+                .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_NDJSON)
                 .expectBodyList(CanonicalTrade.class)
                 .contains(sampleTrade);
     }
@@ -126,7 +126,7 @@ class TradeControllerTest {
                 .uri("/api/v1/trades")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+                .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_NDJSON)
                 .expectBodyList(CanonicalTrade.class)
                 .hasSize(0);
     }

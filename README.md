@@ -152,18 +152,16 @@ curl -X POST "http://localhost:8080/api/v1/trades/upload" \
 
 ### Trade Management (Reactive Endpoints)
 ```bash
-# Stream all trades (Server-Sent Events)
+# Stream all trades (NDJSON - auto-closes connection)
 curl -H "Authorization: Bearer $TOKEN" \
-     -H "Accept: text/event-stream" \
      http://localhost:8080/api/v1/trades
 
 # Get trade by ID
 curl -H "Authorization: Bearer $TOKEN" \
      http://localhost:8080/api/v1/trades/TRADE-123
 
-# Stream trades by status (Server-Sent Events)
+# Stream trades by status (NDJSON)
 curl -H "Authorization: Bearer $TOKEN" \
-     -H "Accept: text/event-stream" \
      "http://localhost:8080/api/v1/trades?status=RECEIVED"
 
 # Get statistics

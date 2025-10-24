@@ -79,12 +79,12 @@ public class TradeController {
 
     /**
      * Get all trades with an optional status filter (fully reactive with WebFlux)
-     * Streams trades as Server-Sent Events
+     * Streams trades as newline-delimited JSON (NDJSON) for better client compatibility
      */
-    @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(produces = MediaType.APPLICATION_NDJSON_VALUE)
     @Operation(
             summary = "Stream all trades with optional status filter",
-            description = "Retrieve all trades as Server-Sent Events stream (fully reactive)"
+            description = "Retrieve all trades as NDJSON stream (fully reactive, auto-closes connection)"
     )
     @ApiResponse(responseCode = "200", description = "Trades streaming successfully")
     public Flux<CanonicalTrade> getAllTrades(
