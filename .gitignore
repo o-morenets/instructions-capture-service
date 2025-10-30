@@ -35,3 +35,9 @@ build/
 ### Environment Variables ###
 .env
 .env.local
+
+### macOS ###
+.DS_Store
+
+### Application Logs ###
+logs/
