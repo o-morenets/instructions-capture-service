@@ -33,11 +33,6 @@ A fully reactive Spring Boot microservice built with **Spring WebFlux** that pro
 - **JUnit 5 + Mockito** - Testing framework
 - **WebTestClient** - Reactive endpoint testing
 
-### What's NOT Included
-- ❌ Spring MVC (replaced with WebFlux)
-- ❌ Spring Boot Actuator (removed for demo simplicity)
-- ❌ AspectJ (removed - no @Scheduled, @Retriable)
-- ❌ Servlet API (fully reactive with Netty)
 
 ## 🏗️ Architecture
 
@@ -81,6 +76,16 @@ A fully reactive Spring Boot microservice built with **Spring WebFlux** that pro
 
 ## ⚙️ Configuration
 
+### Prerequisites
+```bash
+# Install Java 21
+sdk install java 21.0.1-open
+```
+```bash
+# Install Maven
+sdk install maven 3.9.5
+```
+
 The application supports multiple profiles:
 
 ### Local Development (`local`)
@@ -104,7 +109,8 @@ kafka.bootstrap-servers: kafka:9092
 ```bash
 # Start Kafka in KRaft mode (no Zookeeper needed)
 docker compose up kafka -d
-
+```
+```bash
 # Verify Kafka is running
 docker compose logs kafka
 ```
@@ -113,27 +119,27 @@ docker compose logs kafka
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/o-morenets/instructions-capture-service.git
+```
+```bash
 cd instructions-capture-service
-
+```
+```bash
 # Run with Maven
 ./mvnw spring-boot:run
-
-# Or run with specific profile
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
-
-### 3. Verify the Application
-
-```bash
-# Health check
-curl http://localhost:8080/api/v1/trades/health
 
 # Swagger UI (WebFlux)
-open http://localhost:8080/webjars/swagger-ui/index.html
-```
+[Swagger UI](http://localhost:8080/webjars/swagger-ui/index.html)
 
 ## 📡 API Endpoints
+
+### Verify the Application
+
+```bash
+# Health check (no authentication required)
+curl http://localhost:8080/api/v1/trades/health
+```
 
 ### File Upload
 ```bash
@@ -142,7 +148,8 @@ curl -X POST "http://localhost:8080/api/v1/trades/upload" \
      -H "Authorization: Bearer $TOKEN" \
      -H "Content-Type: multipart/form-data" \
      -F "file=@sample-trades.csv"
-
+```
+```bash
 # Upload JSON file
 curl -X POST "http://localhost:8080/api/v1/trades/upload" \
      -H "Authorization: Bearer $TOKEN" \
@@ -155,19 +162,23 @@ curl -X POST "http://localhost:8080/api/v1/trades/upload" \
 # Stream all trades (NDJSON - auto-closes connection)
 curl -H "Authorization: Bearer $TOKEN" \
      http://localhost:8080/api/v1/trades
-
+```
+```bash
 # Get trade by ID
 curl -H "Authorization: Bearer $TOKEN" \
      http://localhost:8080/api/v1/trades/TRADE-123
-
+```
+```bash
 # Stream trades by status (NDJSON)
 curl -H "Authorization: Bearer $TOKEN" \
      "http://localhost:8080/api/v1/trades?status=RECEIVED"
-
+```
+```bash
 # Get statistics
 curl -H "Authorization: Bearer $TOKEN" \
      http://localhost:8080/api/v1/trades/statistics
-
+```
+```bash
 # Clear all trades (testing)
 curl -X DELETE \
      -H "Authorization: Bearer $TOKEN" \
@@ -235,49 +246,27 @@ The service uses JWT Bearer token authentication for all REST API endpoints (exc
 ### Quick Start
 
 1. **Create `.env` file** (recommended):
-   ```bash
-   # Generate a strong secret
-   openssl rand -base64 64
-   
-   # Create .env file in project root
-   cat > .env << 'EOF'
-   JWT_SECRET=your-generated-secret-here
-   EOF
-   ```
-   
-   The application automatically loads variables from `.env` using `spring-dotenv`.
+```bash
+# Generate a strong secret
+openssl rand -base64 64
+```
+```bash
+# Create .env file in project root
+cat > .env << 'EOF'
+JWT_SECRET=your-generated-secret-here
+EOF
+```
+The application automatically loads variables from `.env` using `spring-dotenv`.
 
 2. **Alternative: Export environment variables**:
-   ```bash
-   export JWT_SECRET="your-super-secret-key-here"
-   ```
+```bash
+export JWT_SECRET="your-super-secret-key-here"
+```
 
 3. **Generate a Test Token**:
-   ```bash
-   mvn test -Dtest="JwtTokenGeneratorTest#generateTestToken"
-   ```
-
-4. **Use the Token in Requests**:
-   ```bash
-   TOKEN="your-jwt-token-here"
-   
-   curl -H "Authorization: Bearer $TOKEN" \
-        -F "file=@sample-data/sample-trades.csv" \
-        http://localhost:8080/api/v1/trades/upload
-   ```
-
-For detailed environment setup, see [ENV_SETUP.md](ENV_SETUP.md).
-
-### Protected Endpoints
-
-All endpoints require JWT authentication except:
-- `GET /api/v1/trades/health` - Health check
-- `GET /swagger-ui/**` - Swagger UI
-- `GET /swagger-ui.html` - Swagger UI redirect
-- `GET /webjars/**` - Static resources for Swagger UI
-- `GET /v3/api-docs/**` - OpenAPI documentation
-
-### Integration with Other Services
+```bash
+mvn test -Dtest="JwtTokenGeneratorTest#generateTestToken"
+```
 
 ## 🧪 Testing
 
@@ -290,7 +279,8 @@ All endpoints require JWT authentication except:
 ```bash
 # Unit tests only
 ./mvnw test -Dtest="*Test"
-
+```
+```bash
 # Controller tests only
 ./mvnw test -Dtest="*ControllerTest"
 ```
@@ -305,17 +295,6 @@ docker build -t instructions-capture-service .
 ### Run with Docker Compose
 ```bash
 docker compose up -d
-```
-
-### Environment Variables
-```bash
-# Required
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Optional
-SPRING_PROFILES_ACTIVE=docker
-LOG_LEVEL=INFO
-KAFKA_CONSUMER_GROUP=capture-service  # Default: 'capture-service' (local), 'capture-service-docker' (docker)
 ```
 
 ## 📊 Monitoring
@@ -345,15 +324,10 @@ This project uses **Kafka in KRaft mode**, eliminating the need for Zookeeper:
 
 ### Consumer Configuration
 - **Group ID**: `capture-service`
-- **Auto Commit**: Disabled (manual acknowledgment)
-- **Retry Logic**: 3 attempts with exponential backoff
-- **Dead Letter Topic**: Automatic for failed messages
 
 ### Producer Configuration
 - **Serialization**: JSON format
 - **Key Strategy**: Platform ID for partitioning
-- **Retry Logic**: 3-5 attempts depending on environment
-- **Acknowledgment**: All replicas (`acks=all`)
 
 ## 🚨 Error Handling
 
@@ -363,114 +337,9 @@ This project uses **Kafka in KRaft mode**, eliminating the need for Zookeeper:
 - Processing continues for valid data
 
 ### Kafka Errors
-- Failed messages are retried with exponential backoff
-- Persistent failures are sent to Dead Letter Topic
-- Circuit breaker prevents cascade failures
+- Failed messages are marked with status `FAILED`
+- Scheduler retries failed messages every 5 seconds
 
 ### Validation Errors
 - Input validation errors return HTTP 400 with details
 - Business rule violations are logged and reported
-
-## 🔧 Development
-
-### Prerequisites
-```bash
-# Install Java 21
-sdk install java 21.0.1-open
-
-# Install Maven
-sdk install maven 3.9.5
-
-# Start local Kafka (KRaft mode - no Zookeeper!)
-docker compose up kafka -d
-```
-
-### IDE Setup
-- **IntelliJ IDEA**: Import Maven project, enable annotation processing
-- **VS Code**: Install Java Extension Pack and Spring Boot Extension
-
-### Code Quality
-```bash
-# Run checkstyle
-./mvnw checkstyle:check
-
-# Run SpotBugs
-./mvnw spotbugs:check
-
-# Run all quality checks
-./mvnw verify
-```
-
-## 📈 Performance
-
-### Throughput
-- **File Processing**: 1000+ trades/second with reactive streaming
-- **Kafka Processing**: 5000+ messages/second
-- **Memory Usage**: ~80MB for 176K trades (10MB file)
-
-### Optimization Features
-- **Fully Reactive**: Spring WebFlux with Project Reactor for end-to-end non-blocking I/O
-- **Reactive File Upload**: FilePart with DataBufferUtils for efficient streaming
-- **Backpressure**: Automatic flow control prevents memory overflow
-- **Controlled Concurrency**: Process up to 8 trades in parallel with flatMap
-- **Stream Processing**: Memory-efficient file parsing (handles 10MB+ files)
-- **Reactive Security**: Non-blocking JWT authentication with WebFilter
-- **Connection Pooling**: Optimized Kafka connections
-- **Caching**: In-memory trade storage with ConcurrentHashMap
-
-### Large File Support
-- **10MB CSV**: ~3.5 seconds, 176,000 trades
-- **Memory Peak**: 80MB (vs 120MB with traditional streaming)
-- **No Timeouts**: Handles large files without client disconnection
-- **Response Size**: Optimized (returns trade count only)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Standards
-- Follow Google Java Style Guide
-- Maintain 90%+ test coverage
-- Add documentation for public APIs
-- Use meaningful commit messages
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-**Kafka Connection Failed**
-```bash
-# Check Kafka is running in KRaft mode
-docker ps | grep kafka
-docker compose logs kafka
-
-# Verify topic exists
-docker exec -it instructions-capture-service-kafka-1 kafka-topics --list --bootstrap-server localhost:9092
-
-# Check cluster info
-docker exec -it instructions-capture-service-kafka-1 kafka-cluster --bootstrap-server localhost:9092 cluster-id
-```
-
-**File Upload Errors**
-- Check file size (max 10MB)
-- Verify file format (CSV/JSON only)
-- Ensure proper CSV headers
-
-**Memory Issues**
-- Monitor with `/api/v1/trades/statistics`
-- Consider clearing old trades: `DELETE /api/v1/trades/clear`
-- Adjust JVM heap size: `-Xmx2g`
-- Check logs for backpressure signals
-
-### Support
-- 📧 Email: oleksii.morenets@gmail.com
-- 🐛 Issues: GitHub Issues
-- 💬 Discussions: GitHub Discussions

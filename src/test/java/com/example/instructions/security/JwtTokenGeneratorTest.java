@@ -18,17 +18,17 @@ import java.util.Date;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Slf4j
-@TestPropertySource(properties = {"jwt.secret=${JWT_SECRET}"})
+@TestPropertySource(
+        properties = {"jwt.secret=${JWT_SECRET:YourSecretKeyHereShouldBeAtLeast256BitsLongForHS256AlgorithmToWorkProperly123456789}"}
+)
 class JwtTokenGeneratorTest {
 
     @Value("${jwt.secret}")
     private String SECRET;
 
-    private static final long EXPIRATION_TIME = 3600000; // 1 hour
-
     @Test
     void generateTestToken() {
-        String token = generateToken("test-service", EXPIRATION_TIME);
+        String token = generateToken("test-service", 3600000);
 
         System.out.println("\n========================================");
         System.out.println("JWT Access Token for Testing (1 hour):");
